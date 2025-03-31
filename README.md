@@ -13,6 +13,7 @@ sudo docker compose up -d
 
 ### Generate traffic with iPerf
 Flags:
+
 `--topo-filepath`: Path to gml topology.
 
 `id`: Simple simulation index
