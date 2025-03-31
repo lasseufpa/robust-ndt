@@ -1,0 +1,29 @@
+services:
+  onos:
+    image: onosproject/onos:2.6.0
+    container_name: onos
+    ports:
+      - "8181:8181"
+      - "8101:8101"
+      - "5005:5005"
+      - "830:830"
+      - "6653:6653"
+    restart: unless-stopped
+
+  onos_plugins:
+    image: curlimages/curl
+    container_name: onos_plugins
+    depends_on:
+      - onos
+    command: >
+      sh -c "
+        (sleep 30 &&
+        curl -X POST --header 'Accept: application/json' 'http://onos:8181/onos/v1/applications/org.onosproject.openflow-message/active' --user 'onos:rocks' &&
+        curl -X POST --header 'Accept: application/json' 'http://onos:8181/onos/v1/applications/org.onosproject.workflow.ofoverlay/active' --user 'onos:rocks' &&
+        curl -X POST --header 'Accept: application/json' 'http://onos:8181/onos/v1/applications/org.onosproject.openflow/active' --user 'onos:rocks' &&
+        curl -X POST --header 'Accept: application/json' 'http://onos:8181/onos/v1/applications/org.onosproject.ofagent/active' --user 'onos:rocks' &&
+        curl -X POST --header 'Accept: application/json' 'http://onos:8181/onos/v1/applications/org.onosproject.fwd/active' --user 'onos:rocks' &&
+        curl -X POST --header 'Accept: application/json' 'http://onos:8181/onos/v1/applications/org.onosproject.proxyarp/active' --user 'onos:rocks');
+      "
+
+    restart: no
