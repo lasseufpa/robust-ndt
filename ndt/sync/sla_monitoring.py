@@ -1,0 +1,225 @@
+"""
+Virtual twin with drift detection main script
+and SLA monitoring use case
+"""
+
+import os
+import random
+from time import sleep
+import pathlib
+import subprocess
+import numpy as np
+from river import drift
+from matplotlib import pyplot as plt
+from std_train import get_mean_std_dict, train_and_evaluate, get_default_hyperparams
+import tensorflow as tf
+import std_delay_model
+
+model_version = 0
+async_running = False
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
+def main_loop():
+    """
+    Main loop traffic generation function
+    """
+    global model_version
+    global async_running
+    admin_permission = False
+
+    convey_time = 0
+    root_data_dir = "/home/claudio/papers/2025-cn-netwins/traffic_generator/ditg"
+    dataset_name = "experiment_10"
+    window_size = 6800 # [6800, 7000, 6800]
+
+    model_version = 0
+    training_data = [f"{root_data_dir}/labeled_data/{dataset_name}0_uc_cv",
+                    f"{root_data_dir}/labeled_data/{dataset_name}1_uc_cv",
+                    f"{root_data_dir}/labeled_data/{dataset_name}2_uc_cv",
+                    f"{root_data_dir}/labeled_data/{dataset_name}4_uc_cv"]
+
+    model_weights_dir = "weights/model_version"
+
+    if not os.path.isfile(f"{model_weights_dir}_{model_version}/final_weight.index"):
+        untrained_model = _load_untrained_model()
+        training_vtwin(training_data[model_version], untrained_model)
+
+    stream_data_dir = [f"{root_data_dir}/labeled_data/{dataset_name}0_uc_cv/testing",
+                        f"{root_data_dir}/labeled_data/{dataset_name}1_uc_cv/testing",
+                        f"{root_data_dir}/labeled_data/{dataset_name}2_uc_cv/testing",
+                        f"{root_data_dir}/labeled_data/{dataset_name}4_uc_cv/testing"]
+
+    weight_filename = f"{model_weights_dir}_{model_version}/final_weight.index"
+    last_weight_id = os.path.getmtime(weight_filename)
+    stream_data = tf.data.Dataset.load(f"{stream_data_dir[0]}", compression="GZIP")
+
+    for stream_dir in stream_data_dir[1:]:
+        new_data = tf.data.Dataset.load(stream_dir,
+                                                compression="GZIP")
+        stream_data = stream_data.concatenate(new_data)
+
+    trained_model = _load_trained_model(training_data[model_version],
+                                        f"{model_weights_dir}_{model_version}/final_weight")
+    nmses, indexes, points = [], [], []
+    flow_id = 0
+
+    kswin = drift.KSWIN(alpha=0.001, window_size=window_size, stat_size=1200, seed=42)
+    model_training = None
+    window_index = 0
+    model_updated = []
+    drift_detected = []
+    gt_all_sla_violations = []
+    pred_all_sla_violations = []
+
+    for _, (sample_features, labels) in enumerate(stream_data):
+        pred_sla_violations = 0
+        gt_sla_violations = 0
+        stream_data_sample = (sample_features, labels)
+        weight_filename = f"{model_weights_dir}_{model_version}/final_weight.index"
+
+        # update virtual twin model
+        if (os.path.isfile(weight_filename) and \
+            os.path.getmtime(weight_filename) > last_weight_id \
+                                        and admin_permission \
+                                        and not async_running):
+            print("New model")
+            model_updated.append(window_index)
+            last_weight_id = os.path.getmtime(weight_filename)
+            print(f"Model version {model_version} in production")
+            trained_model = _load_trained_model(training_data[model_version],
+                                    f"{model_weights_dir}_{model_version}/final_weight")
+
+        _, predicted_delay = predicting_vtwin(trained_model, stream_data_sample)
+
+        #print(predicted_delay)
+        #print(labels.numpy())
+        for i, budget in enumerate((sample_features["flow_delay_budget"].numpy())):
+            if predicted_delay[i] > budget:
+                pred_sla_violations += 1
+            if labels.numpy()[i] > budget:
+                gt_sla_violations += 1
+
+        pred_all_sla_violations.append(pred_sla_violations)
+        gt_all_sla_violations.append(gt_sla_violations)
+
+        plt.plot(pred_all_sla_violations, label="Predicted SLA violations")
+        plt.plot(gt_all_sla_violations, label="Actual SLA violations")
+        plt.xlabel("Window index")
+        plt.ylabel("# of SLA violations")
+        plt.legend()
+        plt.savefig("sla_violations.pdf")
+        plt.close()
+
+
+        for flow_traffic in sample_features["flow_traffic"].numpy():
+            print(flow_id)
+            kswin.update(flow_traffic)
+            if admin_permission and kswin.drift_detected and not async_running:
+                drift_detected.append(window_index)
+                if model_version + 2 > len(training_data):
+                    break
+                print("DRIFT detected")
+                convey_time = 0.8
+                indexes.append(flow_id)
+                points.append(sample_features["flow_traffic"].numpy())
+                print("Retraing the model")
+                async_running = True
+                model_version += 1
+                model_training = subprocess.Popen(["python3", "std_train.py",
+                                "--ds-train", f"{training_data[model_version]}",
+                                "--ckpt-path", f"{model_weights_dir}_{model_version}"])
+            flow_id += 1
+            if flow_id > window_size - 200:
+                sleep(convey_time)
+            if async_running and model_training.poll() is not None:
+                print("Retraining is over")
+                convey_time = 0
+                async_running = False
+        window_index += 1
+    if model_training is not None:
+        model_training.kill()
+    print("Saving Error Metrics")
+    with open(f"uc_mapes_with_admin_{admin_permission}.npz", "wb") as f:
+        np.savez(f, pred_all_sla_violations, gt_all_sla_violations,
+                                        drift_detected, model_updated)
+
+def _load_untrained_model():
+    model = std_delay_model.VirtualTwin
+
+    return model
+
+
+def _load_trained_model(training_data, model_weights_file):
+    """
+    Load a trained GNN model
+    """
+    model = std_delay_model.VirtualTwin()
+
+    model.load_weights(f"{model_weights_file}")
+
+    # Compile the model
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        loss=tf.keras.losses.MeanAbsolutePercentageError(),
+        metrics=tf.keras.metrics.MeanAbsolutePercentageError()
+    )
+
+    model.set_mean_std_scores(
+        get_mean_std_dict(
+            tf.data.Dataset.load(f"{training_data}/training",
+            compression="GZIP"),
+            model.mean_std_scores_fields,
+        )
+    )
+
+    return model
+
+
+def predicting_vtwin(trained_model, stream_data):
+    """
+    function to prediction per-flow delay using
+    a trained GNN model
+    """
+    # obtain the prediction as numpy array, and flatten
+    predicted_delay = trained_model(stream_data[0]).numpy().reshape((-1,))
+    ground_truth_delay = stream_data[1].numpy()
+    err_metric = np.mean((ground_truth_delay - predicted_delay)**2)/np.mean(ground_truth_delay**2)
+    err_metric = 10*np.log10(err_metric)
+
+    return err_metric, predicted_delay
+
+
+def training_vtwin(training_data, model):
+    """
+    function to training GNN model
+    """
+    global async_running
+    global model_version
+
+    model_weights_dir = f"weights/model_version_{model_version}/"
+    pathlib.Path(model_weights_dir).mkdir(parents=True, exist_ok=True)
+    _reset_seeds()
+    train_and_evaluate(
+        os.path.join(training_data),
+        model(),
+        **get_default_hyperparams(),
+        ckpt_path=model_weights_dir
+    )
+
+
+def _reset_seeds(seed: int = 42) -> None:
+    """Reset rng seeds, and also indicate tf if to run eagerly or not
+
+    Parameters
+    ----------
+    seed : int, optional
+        Seed for rngs, by default 42
+    """
+    random.seed(seed)
+    tf.random.set_seed(seed)
+    np.random.seed(seed)
+
+
+if __name__ == "__main__":
+    main_loop()
+    
