@@ -1,5 +1,6 @@
 """
 Virtual twin with drift detection main script
+Created by: Cláudio Modesto
 """
 
 import os
@@ -9,14 +10,30 @@ import pathlib
 import subprocess
 import numpy as np
 from river import drift
-from matplotlib import pyplot as plt
 from std_train import get_mean_std_dict, train_and_evaluate, get_default_hyperparams
 import tensorflow as tf
 import std_delay_model
+import argparse
 
 model_version = 0
 async_running = False
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--topology", "-t", help="Type of topology to be used in the experiments.", 
+    type=str, required=True
+)
+parser.add_argument(
+    "--dir", "-d", help="Path to network traffic datasets.", 
+    type=str, required=True
+)
+parser.add_argument(
+    "--sync", "-s", help="Enable twin synchronization.", 
+    action="store_true", required=True
+)
+
+args = parser.parse_args()
 
 def main_loop():
     """
@@ -24,29 +41,52 @@ def main_loop():
     """
     global model_version
     global async_running
-    admin_permission = True
 
     convey_time = 0
-    root_data_dir = "/home/claudio/papers/2025-cn-netwins/traffic_generator/ditg"
-    dataset_name = "experiment_10"
-    window_size = 6800 # [6800, 7000, 6800]
+    root_data_dir = args.dir
+    if args.topology == "5g_crosshaul":
+        dataset_name = "experiment_10"
+        window_size = 6800
+    elif args.topology == "germany":
+        window_size = 7000
+        dataset_name = "experiment_20"
+    elif args.topology == "passion":
+        dataset_name = "experiment_30"
+        window_size = 6800
+    else:
+        raise Exception("This is not a supported topology!")
+
+    # Create the output directory
+    OUTPUT_PATH_NAME = f"results/{args.topology}/"
+    if os.path.isfile(OUTPUT_PATH_NAME):
+        os.remove(OUTPUT_PATH_NAME)
+    else:
+        pathlib.Path(OUTPUT_PATH_NAME).touch()
+
+    # Create the weights directory
+    WEIGHTS_PATH_NAME = f"weights/{args.topology}/"
+    if os.path.isfile(WEIGHTS_PATH_NAME):
+        os.remove(WEIGHTS_PATH_NAME)
+    else:
+        pathlib.Path(WEIGHTS_PATH_NAME).touch()
+
 
     model_version = 0
-    training_data = [f"{root_data_dir}/labeled_data/{dataset_name}0_cv",
-                    f"{root_data_dir}/labeled_data/{dataset_name}1_cv",
-                    f"{root_data_dir}/labeled_data/{dataset_name}2_cv",
-                    f"{root_data_dir}/labeled_data/{dataset_name}4_cv"]
+    training_data = [f"{root_data_dir}/labeled_data/{args.topology}/{dataset_name}0_cv",
+                    f"{root_data_dir}/labeled_data/{args.topology}/{dataset_name}1_cv",
+                    f"{root_data_dir}/labeled_data/{args.topology}/{dataset_name}2_cv",
+                    f"{root_data_dir}/labeled_data/{args.topology}/{dataset_name}4_cv"]
 
-    model_weights_dir = "weights/model_version"
+    model_weights_dir = f"weights/{args.topology}/model_version"
 
     if not os.path.isfile(f"{model_weights_dir}_{model_version}/final_weight.index"):
         untrained_model = _load_untrained_model()
         training_vtwin(training_data[model_version], untrained_model)
 
-    stream_data_dir = [f"{root_data_dir}/labeled_data/{dataset_name}0_cv/testing",
-                        f"{root_data_dir}/labeled_data/{dataset_name}1_cv/testing",
-                        f"{root_data_dir}/labeled_data/{dataset_name}2_cv/testing",
-                        f"{root_data_dir}/labeled_data/{dataset_name}4_cv/testing"]
+    stream_data_dir = [f"{root_data_dir}/labeled_data/{args.topology}/{dataset_name}0_cv/testing",
+                        f"{root_data_dir}/labeled_data/{args.topology}/{dataset_name}1_cv/testing",
+                        f"{root_data_dir}/labeled_data/{args.topology}/{dataset_name}2_cv/testing",
+                        f"{root_data_dir}/labeled_data/{args.topology}/{dataset_name}4_cv/testing"]
 
     weight_filename = f"{model_weights_dir}_{model_version}/final_weight.index"
     last_weight_id = os.path.getmtime(weight_filename)
@@ -74,7 +114,7 @@ def main_loop():
         # update virtual twin model
         if (os.path.isfile(weight_filename) and \
             os.path.getmtime(weight_filename) > last_weight_id \
-                                        and admin_permission \
+                                        and args.sync \
                                         and not async_running):
             print("New model")
             model_updated.append(window_index)
@@ -86,16 +126,10 @@ def main_loop():
         nmse = predicting_vtwin(trained_model, stream_data_sample)
         nmses.append(nmse)
 
-        plt.plot([max(x, -50) for x in nmses])
-        plt.xlabel("Window index")
-        plt.ylabel("$NMSE_{dB}$")
-        plt.savefig("error_metric.pdf")
-        plt.close()
-
         for flow_traffic in sample_features["flow_traffic"].numpy():
             print(flow_id)
             kswin.update(flow_traffic)
-            if admin_permission and kswin.drift_detected and not async_running:
+            if args.sync and kswin.drift_detected and not async_running:
                 drift_detected.append(window_index)
                 if model_version + 2 > len(training_data):
                     break
@@ -114,13 +148,13 @@ def main_loop():
                 sleep(convey_time)
             if async_running and model_training.poll() is not None:
                 print("Retraining is over")
-                convey_time = 0
+                convey_time = 0 # accelerating the simulation when a retraining isn't running
                 async_running = False
         window_index += 1
     if model_training is not None:
         model_training.kill()
-    print("Saving Error Metrics")
-    with open(f"mapes_with_admin_{admin_permission}.npz", "wb") as f:
+    print("Saving error Metrics")
+    with open(f"{OUTPUT_PATH_NAME}/results_sync_{args.sync}.npz", "wb") as f:
         np.savez(f, np.array(nmses), drift_detected, model_updated)
 
 def _load_untrained_model():
