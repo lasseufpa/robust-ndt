@@ -1,5 +1,5 @@
 """
-Virtual twin with drift detection main script
+Operational NDT main script
 Created by: Cláudio Modesto
 """
 
@@ -7,13 +7,14 @@ import os
 import random
 from time import sleep
 import pathlib
+import argparse
 import subprocess
 import numpy as np
 from river import drift
 from std_train import get_mean_std_dict, train_and_evaluate, get_default_hyperparams
 import tensorflow as tf
 import std_delay_model
-import argparse
+
 
 model_version = 0
 async_running = False
@@ -56,22 +57,21 @@ def main_loop():
         dataset_name = "experiment_30"
         window_size = 6800
     else:
-        raise Exception("This is not a supported topology!")
+        raise ValueError("This is not a supported topology!")
 
     # Create the output directory
-    OUTPUT_PATH_NAME = f"results/{args.topology}/"
-    if os.path.isfile(OUTPUT_PATH_NAME):
-        os.remove(OUTPUT_PATH_NAME)
+    output_path_name = f"results/{args.topology}/"
+    if os.path.isfile(output_path_name):
+        os.remove(output_path_name)
     else:
-        pathlib.Path(OUTPUT_PATH_NAME).touch()
+        pathlib.Path(output_path_name).mkdir(parents=True, exist_ok=True)
 
     # Create the weights directory
-    WEIGHTS_PATH_NAME = f"weights/{args.topology}/"
-    if os.path.isfile(WEIGHTS_PATH_NAME):
-        os.remove(WEIGHTS_PATH_NAME)
+    weights_path_name = f"weights/{args.topology}/"
+    if os.path.isfile(weights_path_name):
+        os.remove(weights_path_name)
     else:
-        pathlib.Path(WEIGHTS_PATH_NAME).touch()
-
+        pathlib.Path(weights_path_name).mkdir(parents=True, exist_ok=True)
 
     model_version = 0
     training_data = [f"{root_data_dir}/{args.topology}/{dataset_name}0_cv",
@@ -84,7 +84,10 @@ def main_loop():
     if not os.path.isfile(f"{model_weights_dir}_{model_version}/final_weight.index"):
         print("Training the initial model!!")
         untrained_model = _load_untrained_model()
-        training_vtwin(training_data[model_version], untrained_model)
+        initial_training_vtwin(training_data[model_version],
+                                    untrained_model,
+                                    model_weights_dir,
+                                    topology=args.topology)
 
     stream_data_dir = [f"{root_data_dir}/{args.topology}/{dataset_name}0_cv/testing",
                         f"{root_data_dir}/{args.topology}/{dataset_name}1_cv/testing",
@@ -146,7 +149,8 @@ def main_loop():
                 model_version += 1
                 model_training = subprocess.Popen(["python3", "std_train.py",
                                 "--ds-train", f"{training_data[model_version]}",
-                                "--ckpt-path", f"{model_weights_dir}_{model_version}"])
+                                "--ckpt-path", f"{model_weights_dir}_{model_version}",
+                                "--topology", f"{args.topology}"])
             flow_id += 1
             if flow_id > window_size - 200:
                 sleep(convey_time)
@@ -158,10 +162,13 @@ def main_loop():
     if model_training is not None:
         model_training.kill()
     print("Saving error Metrics")
-    with open(f"{OUTPUT_PATH_NAME}/results_sync_{args.sync}.npz", "wb") as f:
-        np.savez(f, np.array(nmses), drift_detected, model_updated)
+    np.savez(f"{output_path_name}/results_sync_{args.sync}.npz",
+                                np.array(nmses), drift_detected, model_updated)
 
 def _load_untrained_model():
+    """
+    function to load model without training weights
+    """
     model = std_delay_model.VirtualTwin
 
     return model
@@ -169,7 +176,7 @@ def _load_untrained_model():
 
 def _load_trained_model(training_data, model_weights_file):
     """
-    Load a trained GNN model
+    function to load a trained GNN model
     """
     model = std_delay_model.VirtualTwin()
 
@@ -207,26 +214,27 @@ def predicting_vtwin(trained_model, stream_data):
     return err_metric
 
 
-def training_vtwin(training_data, model):
+def initial_training_vtwin(training_data, model, model_weights_dir, topology):
     """
     function to training GNN model
     """
     global async_running
     global model_version
 
-    model_weights_dir = f"weights/model_version_{model_version}/"
-    pathlib.Path(model_weights_dir).mkdir(parents=True, exist_ok=True)
+    model_weights_dir = f"{model_weights_dir}_{model_version}/"
+    #pathlib.Path(model_weights_dir).mkdir(parents=True, exist_ok=True)
     _reset_seeds()
     train_and_evaluate(
         os.path.join(training_data),
         model(),
         **get_default_hyperparams(),
-        ckpt_path=model_weights_dir
+        ckpt_path=model_weights_dir,
+        topology=topology
     )
 
 
 def _reset_seeds(seed: int = 42) -> None:
-    """Reset rng seeds, and also indicate tf if to run eagerly or not
+    """Reset rng seeds
 
     Parameters
     ----------
@@ -240,4 +248,3 @@ def _reset_seeds(seed: int = 42) -> None:
 
 if __name__ == "__main__":
     main_loop()
-    
