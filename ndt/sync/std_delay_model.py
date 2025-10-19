@@ -1,7 +1,16 @@
+"""
+GNN model declaration used as VTwin
+Created by: Cláudio Modesto
+"""
+
 import tensorflow as tf
 import keras.backend as K
 
 class VirtualTwin(tf.keras.Model):
+    """
+    VTwin description considering 4 flow features
+    and 2 link features as input data
+    """
     mean_std_scores_fields = {
         "flow_traffic",
         "link_capacity",
@@ -24,7 +33,7 @@ class VirtualTwin(tf.keras.Model):
         if override_mean_std_scores is not None:
             self.set_mean_std_scores(override_mean_std_scores)
         if name is not None:
-            assert type(name) == str, "name must be a string"
+            assert isinstance(name, str), "name must be a string"
             self.name = name
 
         self.attention = tf.keras.Sequential(
@@ -95,7 +104,7 @@ class VirtualTwin(tf.keras.Model):
 
     def set_mean_std_scores(self, override_mean_std_scores):
         assert (
-            type(override_mean_std_scores) == dict
+            isinstance(override_mean_std_scores, dict)
             and all(kk in override_mean_std_scores for kk in self.mean_std_scores_fields)
             and all(len(val) == 2 for val in override_mean_std_scores.values())
         ), "overriden mean-std dict is not valid!"
@@ -103,7 +112,7 @@ class VirtualTwin(tf.keras.Model):
 
     @tf.function
     def call(self, inputs):
-        # Ensure that the min-max scores are set
+        # Ensure that the std-mean scores are set
         assert self.mean_std_scores is not None, "the model cannot be called before setting the mean-std scores!"
 
         # Process raw inputs
@@ -113,7 +122,6 @@ class VirtualTwin(tf.keras.Model):
         flow_propag_delay = inputs["flow_propag_delay"]
         link_capacity = inputs["link_capacity"]
         link_to_flow = inputs["link_to_flow"]
-        flow_packet_size = inputs["flow_packet_size"]
         flow_to_link = inputs["flow_to_link"]
 
         path_gather_traffic = tf.gather(flow_traffic, flow_to_link[:, :, 0])
@@ -160,7 +168,8 @@ class VirtualTwin(tf.keras.Model):
                 link_gather, initial_state=path_state
             )
 
-            # We select the element in path_state_sequence so that it corresponds to the state before the link was considered
+            # We select the element in path_state_sequence 
+            # so that it corresponds to the state before the link was considered
             path_state_sequence = tf.concat(
                 [tf.expand_dims(previous_path_state, 1), path_state_sequence], axis=1
             )
