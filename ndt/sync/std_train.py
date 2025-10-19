@@ -3,10 +3,12 @@ Script for training GNN model
 '''
 
 import os
+import time
 import random
 from typing import List, Optional, Union, Tuple, Dict, Any
 import tensorflow as tf
 import numpy as np
+from datetime import datetime
 
 # Run eagerly-> Turn true for debugging only
 RUN_EAGERLY = False
@@ -132,8 +134,8 @@ def train_and_evaluate(
     epochs: int = 100,
     ckpt_path: Optional[str] = None,
     tensorboard_path: Optional[str] = None,
+    topology="unspecified",
     restore_ckpt: bool = False,
-    final_eval: bool = True,
 ) -> Tuple[tf.keras.Model, Union[float, np.ndarray, None]]:
     """
     Train the given model with the given dataset, using the provided parameters
@@ -179,9 +181,6 @@ def train_and_evaluate(
         If True, before training the model, it is checked if there is a checkpoint file in the ckpt_path.
         If so, the model loads the latest checkpoint and continues training from there. By default False.
 
-    final_eval : bool, optional
-        If True, the model is evaluated on the validation dataset one last time after training, by default True
-
     Returns
     -------
     Tuple[tf.keras.Model, Union[float, np.ndarray, None]]
@@ -193,9 +192,8 @@ def train_and_evaluate(
     # Check epoch number is valid
     assert epochs > 0, "Epochs must be greater than 0"
     # Load ds
-    if isinstance(ds_path, str):
-        ds_train = tf.data.Dataset.load(f"{ds_path}/training", compression="GZIP")
-        ds_val = tf.data.Dataset.load(f"{ds_path}/validation", compression="GZIP")
+    ds_train = tf.data.Dataset.load(f"{ds_path}/training", compression="GZIP")
+    ds_val = tf.data.Dataset.load(f"{ds_path}/validation", compression="GZIP")
 
     # Checkpoint path
     if ckpt_path is None:
@@ -240,6 +238,7 @@ def train_and_evaluate(
     )
 
     # Train model
+    start_time = time.time()
     model.fit(
         ds_train,
         validation_data=ds_val,
@@ -248,6 +247,17 @@ def train_and_evaluate(
         callbacks=[ckpt_callback, tensorboard_callback] + additional_callbacks,
         use_multiprocessing=True,
     )
+    end_time = time.time()
+    print(f"Training time: {end_time - start_time:.2f} seconds")
+
+    training_time = np.array([])
+
+    if os.path.isfile(f"results/training_time_{topology}.npz"):
+        training_time = np.load("training_time.npz")["arr_0"]
+
+    training_time = np.append(training_time, end_time - start_time)
+    np.savez(f"results/training_time_{topology}.npz", training_time)
+
 
 if __name__ == "__main__":
     import argparse
@@ -257,8 +267,8 @@ if __name__ == "__main__":
         description="Train a model for flow delay prediction"
     )
     parser.add_argument("--ckpt-path", type=str, required=True)
-    # --ds-train ../traffic_generator/mgen/tf_data/mgen_1_cv/0/
     parser.add_argument("--ds-train", type=str, required=True)
+    parser.add_argument("--topology", type=str, required=False)
 
     args = parser.parse_args()
 
@@ -273,5 +283,6 @@ if __name__ == "__main__":
         os.path.join(ds_path),
         Model(),
         **get_default_hyperparams(),
-        ckpt_path=ckpt_path
+        ckpt_path=ckpt_path,
+        topology=args.topology
     )
