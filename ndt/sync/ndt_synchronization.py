@@ -4,7 +4,6 @@ Created by: Cláudio Modesto
 """
 
 import os
-import random
 from time import sleep
 import pathlib
 import argparse
@@ -30,13 +29,17 @@ parser.add_argument(
     type=str, required=True
 )
 parser.add_argument(
+    "--realization", "-r", help="Number of realization to be performed.", 
+    type=int, required=True
+)
+parser.add_argument(
     "--sync", "-s", help="Enable twin synchronization.", 
-    action="store_true", required=True
+    action="store_true", required=False
 )
 
 args = parser.parse_args()
 
-def main_loop():
+def main_loop(realization: int):
     """
     Main loop traffic generation function
     """
@@ -83,11 +86,12 @@ def main_loop():
 
     if not os.path.isfile(f"{model_weights_dir}_{model_version}/final_weight.index"):
         print("Training the initial model!!")
-        untrained_model = _load_untrained_model()
+        untrained_model = load_untrained_model()
         initial_training_vtwin(training_data[model_version],
                                     untrained_model,
                                     model_weights_dir,
-                                    topology=args.topology)
+                                    topology=args.topology,
+                                    realization=realization)
 
     stream_data_dir = [f"{root_data_dir}/{args.topology}/{dataset_name}0_cv/testing",
                         f"{root_data_dir}/{args.topology}/{dataset_name}1_cv/testing",
@@ -103,7 +107,7 @@ def main_loop():
                                                 compression="GZIP")
         stream_data = stream_data.concatenate(new_data)
 
-    trained_model = _load_trained_model(training_data[model_version],
+    trained_model = load_trained_model(training_data[model_version],
                                         f"{model_weights_dir}_{model_version}/final_weight")
     nmses, indexes, points = [], [], []
     flow_id = 0
@@ -127,10 +131,10 @@ def main_loop():
             model_updated.append(window_index)
             last_weight_id = os.path.getmtime(weight_filename)
             print(f"Model version {model_version} in production")
-            trained_model = _load_trained_model(training_data[model_version],
+            trained_model = load_trained_model(training_data[model_version],
                                     f"{model_weights_dir}_{model_version}/final_weight")
 
-        nmse = predicting_vtwin(trained_model, stream_data_sample)
+        _, nmse = predicting_vtwin(trained_model, stream_data_sample)
         nmses.append(nmse)
 
         for flow_traffic in sample_features["flow_traffic"].numpy():
@@ -150,7 +154,8 @@ def main_loop():
                 model_training = subprocess.Popen(["python3", "std_train.py",
                                 "--ds-train", f"{training_data[model_version]}",
                                 "--ckpt-path", f"{model_weights_dir}_{model_version}",
-                                "--topology", f"{args.topology}"])
+                                "--topology", f"{args.topology}",
+                                "--realization", f"{realization}"])
             flow_id += 1
             if flow_id > window_size - 200:
                 sleep(convey_time)
@@ -162,10 +167,10 @@ def main_loop():
     if model_training is not None:
         model_training.kill()
     print("Saving error Metrics")
-    np.savez(f"{output_path_name}/results_sync_{args.sync}.npz",
+    np.savez(f"{output_path_name}/results_sync_{args.sync}_r_{realization}.npz",
                                 np.array(nmses), drift_detected, model_updated)
 
-def _load_untrained_model():
+def load_untrained_model():
     """
     function to load model without training weights
     """
@@ -174,7 +179,7 @@ def _load_untrained_model():
     return model
 
 
-def _load_trained_model(training_data, model_weights_file):
+def load_trained_model(training_data, model_weights_file):
     """
     function to load a trained GNN model
     """
@@ -211,10 +216,13 @@ def predicting_vtwin(trained_model, stream_data):
     err_metric = np.mean((ground_truth_delay - predicted_delay)**2)/np.mean(ground_truth_delay**2)
     err_metric = 10*np.log10(err_metric)
 
-    return err_metric
+    return predicted_delay, err_metric
 
 
-def initial_training_vtwin(training_data, model, model_weights_dir, topology):
+def initial_training_vtwin(training_data, model,
+                                model_weights_dir,
+                                topology,
+                                realization):
     """
     function to training GNN model
     """
@@ -222,29 +230,17 @@ def initial_training_vtwin(training_data, model, model_weights_dir, topology):
     global model_version
 
     model_weights_dir = f"{model_weights_dir}_{model_version}/"
-    #pathlib.Path(model_weights_dir).mkdir(parents=True, exist_ok=True)
-    _reset_seeds()
     train_and_evaluate(
         os.path.join(training_data),
-        model(),
+        model(),''
         **get_default_hyperparams(),
         ckpt_path=model_weights_dir,
-        topology=topology
+        topology=topology,
+        realization=realization
     )
 
-
-def _reset_seeds(seed: int = 42) -> None:
-    """Reset rng seeds
-
-    Parameters
-    ----------
-    seed : int, optional
-        Seed for rngs, by default 42
-    """
-    random.seed(seed)
-    tf.random.set_seed(seed)
-    np.random.seed(seed)
-
-
 if __name__ == "__main__":
-    main_loop()
+    N_REALIZATIONS = args.realization
+
+    for realization in range(N_REALIZATIONS):
+        main_loop(realization)
