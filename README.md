@@ -5,6 +5,7 @@ ArXiv link: https://arxiv.org/abs/2507.20971
 The ability of the network digital twin (NDT) to remain aware of changes in its physical counterpart, known as the physical twin (PTwin), is a fundamental condition to enable timely synchronization, also referred to as twinning. In this way, considering a transport network, a key requirement is to handle unexpected traffic variability and dynamically adapt to maintain optimal performance in the associated virtual model, known as the virtual twin (VTwin).In this context, we propose a self-adaptive implementation of a novel NDT architecture designed to provide accurate delay predictions, even under fluctuating traffic conditions. This architecture addresses an essential challenge, underexplored in the literature: improving the resilience of data-driven NDT platforms against traffic variability and improving synchronization between the VTwin and its physical counterpart. 
 
 ## Repository directory structure
+```bash
 ├── ndt
 │   ├── alone_training
 │   └── sync
@@ -14,7 +15,7 @@ The ability of the network digital twin (NDT) to remain aware of changes in its 
 │       └── results
 └── traffic_generator
     └── topologies
-
+```
 
 ## Getting started
 To install the python environment used to conduct the experiments, use the following command:
@@ -96,7 +97,9 @@ To generate the results, you can run the `ndt_synchronization.py` script:
 Flags:
 
 `--topology`: Topology to be adopted in the NDT simulations.
+
 `--database`: Path to retraining data.
+
 `--realization`: Number of independent realization to used in the simulations.
 
 ```bash
