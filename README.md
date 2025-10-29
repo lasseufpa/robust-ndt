@@ -33,10 +33,12 @@ sudo docker compose up -d
 ```
 
 ## Data generation
-### Generate raw network traffic with D-ITG
+The data generation is process that starts with the generation of the raw dataset using the D-ITG simulator using `generate_traffic.py`. However, this data generated, at this stage, is not suitable for training a deep learning model (VTwin). So, we need to extract all features available using `generate_metrics.py` script, to finally generate Tensorflow-like data, using `generate_data.py` script, to be used by the VTwin model. 
+
+### Generate raw network traffic data with D-ITG
 Flags:
 
-`--topo-filepath`: Path to gml topology.
+`--topo-filepath`: Path to `.gml` topology.
 
 `id`: Simple simulation index.
 ```bash
