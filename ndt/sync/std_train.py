@@ -1,32 +1,18 @@
 '''
-Script for training GNN model
+Script for training GNN model as VTwin
 '''
 
 import os
 import time
-import random
 from typing import List, Optional, Union, Tuple, Dict, Any
 import tensorflow as tf
 import numpy as np
-from datetime import datetime
 
 # Run eagerly-> Turn true for debugging only
 RUN_EAGERLY = False
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 tf.config.run_functions_eagerly(RUN_EAGERLY)
-
-def _reset_seeds(seed: int = 42) -> None:
-    """Reset rng seeds, and also indicate tf if to run eagerly or not
-
-    Parameters
-    ----------
-    seed : int, optional
-        Seed for rngs, by default 42
-    """
-    random.seed(seed)
-    tf.random.set_seed(seed)
-    np.random.seed(seed)
 
 
 def get_default_callbacks() -> List[tf.keras.callbacks.Callback]:
@@ -71,12 +57,13 @@ def get_default_hyperparams() -> Dict[str, Any]:
 def get_mean_std_dict(
     ds: tf.data.Dataset, params: List[str], include_y: Optional[str] = None
 ) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
-    """Get the min and the max-min for different parameters of a dataset. Later used by the models for the min-max normalization.
+    """Get the min and the max-min for different parameters of a dataset. 
+    Later used by the models for the mean-std normalization.
 
     Parameters
     ----------
     ds : tf.data.Dataset
-        Training dataset where to base the min-max normalization from.
+        Training dataset where to base the mean-std normalization from.
 
     params : List[str]
         List of strings indicating the parameters to extract the features from.
@@ -89,7 +76,7 @@ def get_mean_std_dict(
     Returns
     -------
     Dict[str, Tuple[np.ndarray, np.ndarray]]
-        Dictionary containing the values needed for the min-max normalization.
+        Dictionary containing the values needed for the mean-std normalization.
         The first value is the min value of the parameter, and the second is 1 / (max - min).
     """
 
@@ -135,7 +122,8 @@ def train_and_evaluate(
     ckpt_path: Optional[str] = None,
     tensorboard_path: Optional[str] = None,
     topology="unspecified",
-    restore_ckpt: bool = False,
+    realization=0,
+    target="unspecified",
 ) -> Tuple[tf.keras.Model, Union[float, np.ndarray, None]]:
     """
     Train the given model with the given dataset, using the provided parameters
@@ -169,7 +157,7 @@ def train_and_evaluate(
         A callback to generate tensorboard and checkpoint files at each epoch is already added.
 
     epochs : int, optional
-        Number of epochs of in the training process, by default 100
+        Number of epochs of in the training process, by default 50
 
     ckpt_path : Optional[str], optional
         Path where to store the training checkpints, by default "{repository root}/ckpt/{model name}"
@@ -177,18 +165,12 @@ def train_and_evaluate(
     tensorboard_path : Optional[str], optional
         Path where to store tensorboard logs, by default "{repository root}/tensorboard/{model name}"
 
-    restore_ckpt : bool, optional
-        If True, before training the model, it is checked if there is a checkpoint file in the ckpt_path.
-        If so, the model loads the latest checkpoint and continues training from there. By default False.
-
     Returns
     -------
     Tuple[tf.keras.Model, Union[float, np.ndarray, None]]
         Instance of the trained model, and the result of its evaluation
     """
 
-    # Reset tf state
-    _reset_seeds()
     # Check epoch number is valid
     assert epochs > 0, "Epochs must be greater than 0"
     # Load ds
@@ -202,7 +184,7 @@ def train_and_evaluate(
     if tensorboard_path is None:
         tensorboard_path = f"tensorboard/{model.name}"
 
-    # Apply min-max normalization
+    # Apply mean-std normalization
     model.set_mean_std_scores(get_mean_std_dict(ds_train, model.mean_std_scores_fields))
 
     # Compile model
@@ -212,22 +194,10 @@ def train_and_evaluate(
         metrics=metrics,
         run_eagerly=RUN_EAGERLY,
     )
-    # Load checkpoint
-    if restore_ckpt:
-        ckpt = tf.train.latest_checkpoint(ckpt_path)
-        if ckpt is not None:
-            print("Restoring from checkpoint")
-            model.load_weights(ckpt)
-        else:
-            print(
-                f"WARNING: No checkpoint was found at '{ckpt_path}', training from scratch instead..."
-            )
-    else:
-        print("restore_ckpt = False, training from scratch")
 
     #Create callbacks
     ckpt_callback = tf.keras.callbacks.ModelCheckpoint(
-        filepath=os.path.join(ckpt_path, "final_weight"),
+        filepath=os.path.join(ckpt_path, f"{target}_final_weight"),
         verbose=0,
         mode="min",
         save_best_only=False,
@@ -251,12 +221,12 @@ def train_and_evaluate(
     print(f"Training time: {end_time - start_time:.2f} seconds")
 
     training_time = np.array([])
-
-    if os.path.isfile(f"results/training_time_{topology}.npz"):
-        training_time = np.load("training_time.npz")["arr_0"]
+    training_time_filename = f"results/{topology}/training_time_{topology}_{target}_r_{realization}.npz"
+    if os.path.isfile(f"{training_time_filename}"):
+        training_time = np.load(f"{training_time_filename}")["arr_0"]
 
     training_time = np.append(training_time, end_time - start_time)
-    np.savez(f"results/training_time_{topology}.npz", training_time)
+    np.savez(f"{training_time_filename}", training_time)
 
 
 if __name__ == "__main__":
@@ -269,6 +239,8 @@ if __name__ == "__main__":
     parser.add_argument("--ckpt-path", type=str, required=True)
     parser.add_argument("--ds-train", type=str, required=True)
     parser.add_argument("--topology", type=str, required=False)
+    parser.add_argument("--realization", type=int, required=False)
+    parser.add_argument("--target", type=str, required=False)
 
     args = parser.parse_args()
 
@@ -278,11 +250,12 @@ if __name__ == "__main__":
     Model = std_delay_model.VirtualTwin
 
     # code for simple training/validation
-    _reset_seeds()
     train_and_evaluate(
         os.path.join(ds_path),
         Model(),
         **get_default_hyperparams(),
         ckpt_path=ckpt_path,
-        topology=args.topology
+        topology=args.topology,
+        realization=args.realization,
+        target=args.target
     )
