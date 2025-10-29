@@ -52,12 +52,12 @@ The table below describe the characteristics of the datasets generated.
 | # | Traffic pattern | Topology      | Number of flows (T) |
 |---|------------------|---------------|---------------------|
 |   |                  | 5G-Crosshaul  | 121,400             |
-| 1 |    Exponential   | Germany       | 129,600             |
+| 1 |Exponential       | Germany       | 129,600             |
 |   |                  | PASSION       | 129,600             |
 |   |                  | 5G-Crosshaul  | 234,501             |
 | 2 | Poisson          | Germany       | 257,401             |
 |   |                  | PASSION       | 243,001             |
-|   |                  | 5G-Crosshaul   | 347,002             |
+|   |                  | 5G-Crosshaul  | 347,002             |
 | 3 | Uniform          | Germany       | 378,802             |
 |   |                  | PASSION       | 355,002             |
 |   |                  | 5G-Crosshaul  | 447,803             |
@@ -83,15 +83,17 @@ Flags:
 
 `--input-dir`: Path to processed metrics
 
+`--output-dir`: Path to output dataset
+
 ```bash
 python3 generate_data.py --input-dir [path-to-processed-dir] --output-dir [path-to-output-dir]
 ```
 
-## NDT synchronization
+## NDT operation
 
 To run a transport network NDT, you can use standlone script from `alone_training`, which there is no synchronization elements, or the scripts in `sync` directory with synchronization elements.
 
-### NDT synchronization
+### NDT with synchronization
 To generate the results, you can run the `ndt_synchronization.py` script:
 
 Flags:
@@ -102,9 +104,37 @@ Flags:
 
 `--realization`: Number of independent realization to used in the simulations.
 
+`--sync`: Flag to enable NDT synchronization.
+
+`--target`: Type of QoS to be predicted.
+
 ```bash
-python3 ndt_synchronization.py --topology 5g_crosshaul --dir database -- realization 10
+python3 ndt_synchronization.py --topology 5g_crosshaul --dir delay_database --realization 10 --sync --target delay 
 ```
+
+### Application for SLA monitoring
+
+## Generate result plots:
+Several scripts are available in the `misc` directory, that can be used to replicate the results used in this work. Below, there is a short description of each one.
+
+`concept_drift_op_plot.py`:
+
+`get_nmse_metrics.py`:
+
+`histogram_plot.py`:
+
+`single_plot.py`:
+
+`multiple_plots.py`:
+
+`sla_violations_plot.py`:
+
+`training_time_plot.py`:
+
+`window_size_plot.py`:
+
+
+In the above example, the transport network NDT will running considering the 5G-Crosshaul, the QoS metric to be predicted will be the per-flow delay, and 10 traininig process realization will be taken.
 
 ## Credits
 
