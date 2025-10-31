@@ -7,14 +7,15 @@ The ability of the network digital twin (NDT) to remain aware of changes in its 
 ## Repository directory structure
 ```bash
 ├── ndt
-│   ├── alone_training
+│   ├── alone_training -> directory with standalone training script and VTwin declaration model
 │   └── sync
-│       ├── database
-│       ├── database_for_app
-│       ├── misc
-│       └── results
-└── traffic_generator
-    └── topologies
+│       ├── delay_database -> directory with database with delay as the target metric
+│       ├── database_for_app -> directory with database with packet delay budget
+│       ├── jitter_database -> directory with database with jitter as the target metric
+│       ├── misc -> directory with plot scripts
+│       └── results -> directory with NDT operation across different realizations
+└── traffic_generator -> directory with all scripts to generate raw and tensorflow-like data
+    └── topologies -> directory with different transport network topologies in GML format
 ```
 
 ## Getting started
@@ -114,6 +115,8 @@ Flags:
 python3 ndt_synchronization.py --topology 5g_crosshaul --dir delay_database --realization 10 --sync --target delay 
 ```
 
+In the above example, the transport network NDT will running considering the 5G-Crosshaul, the QoS metric to be predicted will be the per-flow delay, and 10 traininig process realization will be taken.
+
 ### Application for SLA monitoring
 
 ## Generate result plots:
@@ -134,9 +137,6 @@ Several scripts are available in the `misc` directory, that can be used to repli
 `training_time_plot.py`: Script to generate a plot related to the average retraining time (across all realization) for each topology after different concept drift event. 
 
 `window_size_plot.py`: Script to generate a plot evaluating the number of concept drift detected considering different window size (a concept drift hyperparamenter).
-
-
-In the above example, the transport network NDT will running considering the 5G-Crosshaul, the QoS metric to be predicted will be the per-flow delay, and 10 traininig process realization will be taken.
 
 ## Credits
 
