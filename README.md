@@ -119,21 +119,21 @@ python3 ndt_synchronization.py --topology 5g_crosshaul --dir delay_database --re
 ## Generate result plots:
 Several scripts are available in the `misc` directory, that can be used to replicate the results used in this work. Below, there is a short description of each one.
 
-`concept_drift_op_plot.py`:
+`concept_drift_op_plot.py`: Script to generate plot with concept drift operation (points where a concept drift was detected) across the 5G-crosshaul, Germany and PASSION topologies.
 
-`get_nmse_metrics.py`:
+`get_nmse_metrics.py`: Script to obtain the NMSE metrics across all NDT realizations.
 
-`histogram_plot.py`:
+`histogram_plot.py`: Script to plot the characteristics of each network topology, related to capacity and propagation delay characteristics.
 
-`single_plot.py`:
+`single_plot.py`: Script to generate a single plot (only one topology) the NMSE performance in considering a scenario with and without synchronization.
 
-`multiple_plots.py`:
+`multiple_plots.py`: Script to generate the NMSE performance (two topologies) considering a scenario with and without synchronization architecture.
 
-`sla_violations_plot.py`:
+`sla_violations_plot.py`: Script to generate the results considering a network application (SLA monitoring) with and without the proposed synchronization architecture.
 
-`training_time_plot.py`:
+`training_time_plot.py`: Script to generate a plot related to the average retraining time (across all realization) for each topology after different concept drift event. 
 
-`window_size_plot.py`:
+`window_size_plot.py`: Script to generate a plot evaluating the number of concept drift detected considering different window size (a concept drift hyperparamenter).
 
 
 In the above example, the transport network NDT will running considering the 5G-Crosshaul, the QoS metric to be predicted will be the per-flow delay, and 10 traininig process realization will be taken.
