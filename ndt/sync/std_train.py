@@ -232,6 +232,7 @@ def train_and_evaluate(
 if __name__ == "__main__":
     import argparse
     import std_delay_model
+    import std_jitter_model
 
     parser = argparse.ArgumentParser(
         description="Train a model for flow delay prediction"
@@ -247,7 +248,13 @@ if __name__ == "__main__":
     # Check the scenario
     ds_path = args.ds_train
     ckpt_path = args.ckpt_path
-    Model = std_delay_model.VirtualTwin
+
+    if args.target == "delay":
+        Model = std_delay_model.VirtualTwin
+    elif args.target == "jitter":
+        Model = std_jitter_model.VirtualTwin
+    else:
+        raise ValueError("Choose a proper QoS predictor model!")
 
     # code for simple training/validation
     train_and_evaluate(
