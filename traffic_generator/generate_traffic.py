@@ -1,8 +1,8 @@
-'''
+"""
 Main script to generate traffic using iperf traffic generator
 Created by: Cleverson Nahum
 Edited by: Cláudio Modesto
-'''
+"""
 import os
 import pathlib
 import argparse
@@ -15,10 +15,10 @@ from mininet.log import setLogLevel
 from network_scenario import Network
 
 def create_flows_description(number_nodes, net_topology, experiment_dir) -> dict:
-    '''
+    """
     Create the description of traffic generation
     including the number of connections and streams
-    '''
+    """
     n_conn = 80 # number of server-client pairs
     n_streams = 1
     duration = 9000
@@ -42,50 +42,50 @@ def create_flows_description(number_nodes, net_topology, experiment_dir) -> dict
             continue
         selected_edges += current_edges
         selected_nodes.append(all_src_dst[src_dst_idx[conn_idx]][1])
-        flows_description[f'conn_{conn_idx}'] = {
-            'src': all_src_dst[src_dst_idx[conn_idx]][0],
-            'dst': all_src_dst[src_dst_idx[conn_idx]][1],
-            'n_streams': n_streams,
-            'pattern': pattern,
-            'packet_size': packet_size,
-            'duration': duration,
-            'conn_id': conn_idx
+        flows_description[f"conn_{conn_idx}"] = {
+            "src": all_src_dst[src_dst_idx[conn_idx]][0],
+            "dst": all_src_dst[src_dst_idx[conn_idx]][1],
+            "n_streams": n_streams,
+            "pattern": pattern,
+            "packet_size": packet_size,
+            "duration": duration,
+            "conn_id": conn_idx
         }
 
     traffic_metadata = {}
-    traffic_metadata['tr_metadata'] = {'max_n_conn': n_conn,
-                                    'topology': net_topology.graph.get('label', 'no label'),
-                                    'n_streams': n_streams,
-                                    'packet_size': packet_size,
-                                    'duration': duration,
-                                    'pattern': pattern}
+    traffic_metadata["tr_metadata"] = {"max_n_conn": n_conn,
+                                    "topology": net_topology.graph.get("label", "no label"),
+                                    "n_streams": n_streams,
+                                    "packet_size": packet_size,
+                                    "duration": duration,
+                                    "pattern": pattern}
     all_mininet_metadata = {}
-    mininet_data_filename = f'{experiment_dir}/mininet_data.json'
+    mininet_data_filename = f"{experiment_dir}/mininet_data.json"
     if os.path.isfile(mininet_data_filename):
-        with open(mininet_data_filename, 'r', encoding='utf-8') as f:
+        with open(mininet_data_filename, "r", encoding="utf-8") as f:
             all_mininet_metadata = json.load(f)
-    if 'tr_metadata' in all_mininet_metadata.keys():
-        all_mininet_metadata['tr_metadata'].update(traffic_metadata)
+    if "tr_metadata" in all_mininet_metadata.keys():
+        all_mininet_metadata["tr_metadata"].update(traffic_metadata)
     else:
-        all_mininet_metadata['tr_metadata'] = traffic_metadata
+        all_mininet_metadata["tr_metadata"] = traffic_metadata
 
-    with open(f'{experiment_dir}/mininet_data.json', 'w', encoding='utf-8') as f:
+    with open(f"{experiment_dir}/mininet_data.json", "w", encoding="utf-8") as f:
         json.dump(all_mininet_metadata, f, indent=4)
 
     return flows_description
 
 def main(identifier: int, topo_filepath: str):
-    '''
+    """
     main script for generate traffic
-    '''
-    setLogLevel('info')
+    """
+    setLogLevel("info")
     topo_params = {
-        'bandwidth': 'capacity',
-        'delay': 'delay',
-        'loss': 'loss',
+        "bandwidth": "capacity",
+        "delay": "delay",
+        "loss": "loss",
     }
 
-    experiment_dir = f'./logs/experiment_{identifier}'
+    experiment_dir = f"./logs/experiment_{identifier}"
 
     # seconds (if it is too small, the topology may not be available in the ONOS yet)
     time_wait_topology = 20
@@ -93,26 +93,26 @@ def main(identifier: int, topo_filepath: str):
     # seconds (if it is too small, the flows may not be available in the ONOS yet)
     # Create folder and log file
     pathlib.Path(experiment_dir).mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(topo_filepath, f'{experiment_dir}/topology.gml')
-    net_topology = nx.read_gml(f'{experiment_dir}/topology.gml')
+    shutil.copyfile(topo_filepath, f"{experiment_dir}/topology.gml")
+    net_topology = nx.read_gml(f"{experiment_dir}/topology.gml")
     network = Network(topo_file=topo_filepath, topo_params=topo_params)
     flows_description = create_flows_description(len(network.net.hosts),
                                                 net_topology,
                                                 experiment_dir)
-    print('Flows description:\n', flows_description)
+    print("Flows description:\n", flows_description)
     network.start(
         time_wait_topology=time_wait_topology,
         flows_description=flows_description,
         experiment_dir=experiment_dir
     )
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Run the traffic generator')
-    parser.add_argument('--id', type=int, required=True, help='Experiment identifier')
-    parser.add_argument('--topo-filepath',
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run the traffic generator")
+    parser.add_argument("--id", type=int, required=True, help="Experiment identifier")
+    parser.add_argument("--topo-filepath",
                         type=str,
                         required=True,
-                        help='Network topology .gml file')
+                        help="Network topology .gml file")
     args = parser.parse_args()
 
     main(args.id, args.topo_filepath)
