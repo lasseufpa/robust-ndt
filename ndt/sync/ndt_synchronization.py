@@ -1,6 +1,7 @@
 """
 Operational NDT main script
 Created by: Cláudio Modesto
+LASSE
 """
 
 import os
@@ -150,7 +151,7 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
         window_index += 1
     if model_training is not None:
         model_training.kill()
-    print("=> Assessement finished!")
+    print("\n=> Assessement finished!")
     print("=> Saving error Metrics")
     np.savez(f"{output_path_name}/results_sync_{target}_{sync}_r_{realization}.npz",
                                 np.array(nmses), drift_detected, model_updated)
