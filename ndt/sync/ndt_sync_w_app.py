@@ -2,9 +2,10 @@
 Virtual twin with drift detection main script
 and SLA monitoring use case
 Created by: Cláudio Modesto
+LASSE
 """
 
-import os, warnings
+import os
 from time import sleep
 import pathlib
 import argparse
@@ -183,10 +184,6 @@ if __name__ == "__main__":
         type=int, required=True
     )
     parser.add_argument(
-        "--target", "-g", help="QoS metric to be predicted.", 
-        type=str, required=True
-    )
-    parser.add_argument(
         "--dir", "-d", help="Path to network traffic datasets.", 
         type=str, required=True
     )
@@ -198,5 +195,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     for realization in range(args.realization):
-        main_loop(realization, args.target, args.dir,
+        main_loop(realization, "delay", args.dir,
                                 args.topology, args.sync)
