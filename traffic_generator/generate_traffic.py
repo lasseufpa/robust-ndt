@@ -2,6 +2,7 @@
 Main script to generate traffic using iperf traffic generator
 Created by: Cleverson Nahum
 Edited by: Cláudio Modesto
+LASSE
 """
 import os
 import pathlib

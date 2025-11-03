@@ -2,6 +2,7 @@
 Generate deep learning input-output 
 dataset from traffic generator data
 Created by Cláudio Modesto
+LASSE
 """
 
 import json

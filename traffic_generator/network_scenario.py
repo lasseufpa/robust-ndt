@@ -1,8 +1,9 @@
-'''
+"""
 Script to instantiate a Mininet topology and generate traffic
 Created by: Cleverson Nahum
 Edited by: Cláudio Modesto
-'''
+LASSE
+"""
 
 import os
 import json
@@ -20,9 +21,9 @@ import requests
 
 
 class Network:
-    '''
+    """
     Define mininet topology methods and attributes 
-    '''
+    """
     def __init__(
         self,
         topo_file: str,
@@ -103,9 +104,9 @@ class Network:
         flows_description: dict,
         experiment_dir: str = "./logs",
     ):
-        '''
+        """
         Instatiate a miniet topology and generate traffic in it
-        '''
+        """
         self.net.start()
         info("INFO: Mininet topology started\n")
         sleep(time_wait_topology)
@@ -117,31 +118,31 @@ class Network:
         self.net.stop()
 
     def gen_mac_address(self, idx: int):
-        '''
+        """
         Get MAC address of a given network switch by id
-        '''
+        """
         return f"00:00:00:00:00:{idx:02x}"
 
     def get_device_id(self, idx: int):
-        '''
+        """
         Get device id from openflow hexidecimal identifier
-        '''
+        """
         return f"of:{(idx+1):016d}"
 
     def start_servers(self, flows_description: dict):
-        '''
+        """
         Starts mgen server
-        '''
+        """
         for _, conn_info in flows_description.items():
             mn_dst_host = self.hosts[conn_info["dst"]]
-            mn_dst_host.cmd('ITGRecv&')
+            mn_dst_host.cmd("ITGRecv&")
 
     def start_clients(self,
                     flows_description: dict,
                     experiment_dir: str = "./logs"):
-        '''
+        """
         Starts ditg client
-        '''
+        """
         flowpath_filename = f"{experiment_dir}/conn_paths.json"
         if os.path.isfile(flowpath_filename):
             os.remove(flowpath_filename)
@@ -157,45 +158,45 @@ class Network:
                             target=str(conn_info["dst"]))
             print(shortest_path)
             all_capacities = [self.net_topology.get_edge_data(
-                    str(shortest_path[i]), str(shortest_path[i+1]))[0].get('capacity')
+                    str(shortest_path[i]), str(shortest_path[i+1]))[0].get("capacity")
                     for i in range(len(shortest_path[:-1]))]
             rate = 20000
-            protocol = 'TCP'
+            protocol = "TCP"
             rate = (min(all_capacities) * 10e3)/4
             rate = rate - rate/2
 
             max_rate, min_rate, mean = 0, 0, 0
             pattern = ""
             print(conn_info["pattern"])
-            if conn_info["pattern"] == 'uniform':
+            if conn_info["pattern"] == "uniform":
                 rate = (min(all_capacities) * 10e3)/4
                 min_rate = rate - rate/2
                 max_rate = rate - 10000
                 pattern = f" -U {min_rate} {max_rate} -u {packet_size} {2*packet_size}"
-            elif conn_info["pattern"] == 'congested':
-                protocol = 'UDP'
+            elif conn_info["pattern"] == "congested":
+                protocol = "UDP"
                 rate = (min(all_capacities) * 10e3)/4
                 rate = rate - rate/2
                 pattern = f"-C {rate}"
-            elif conn_info["pattern"] == 'normal':
+            elif conn_info["pattern"] == "normal":
                 mean =  rate - rate/2
                 pattern = f"-C {mean} -n {packet_size} {0.3*packet_size}"
-            elif conn_info["pattern"] == 'exp':
+            elif conn_info["pattern"] == "exp":
                 mean = rate - rate/2
                 pattern = f"-E {mean} -e {packet_size}"
-            elif conn_info["pattern"] == 'poisson':
+            elif conn_info["pattern"] == "poisson":
                 mean = rate - rate/2
                 pattern = f"-O {mean} -o {packet_size}"
-            elif conn_info["pattern"] == 'pareto':
+            elif conn_info["pattern"] == "pareto":
                 mean = rate - rate/2
                 pattern = f"-C {mean} -v 1 {packet_size}"
-            elif conn_info["pattern"] == 'burst':
+            elif conn_info["pattern"] == "burst":
                 mean = rate - rate/2
                 pattern = f"-B O {mean} O {mean} -o {packet_size}"
-            elif conn_info["pattern"] == 'gamma':
+            elif conn_info["pattern"] == "gamma":
                 pattern = f"-G 0.5 {mean} -g 0.5 {packet_size}"
             else:
-                raise Exception('Pattern did not found!')
+                raise Exception("Pattern did not found!")
             
             duration = conn_info["duration"]
             mn_src_host.cmd(f"ITGSend -T {protocol} \
@@ -204,7 +205,7 @@ class Network:
                                         -t {duration}000 \
                                         -x {experiment_dir}/{conn_id}_traffic_results_rx.log &")
 
-            info(f'Saving flow paths of connection {conn_id}\n')
+            info(f"Saving flow paths of connection {conn_id}\n")
             sleep(4)
             self.get_flow_paths(conn_info, conn_id, experiment_dir)
         sleep(duration)
@@ -226,7 +227,7 @@ class Network:
                     auth=(self.onos_user, self.onos_pass)
             )
         except requests.exceptions.Timeout:
-            print('ERROR: The requests time out')
+            print("ERROR: The requests time out")
 
         paths.json().get("flows", [])
         
@@ -236,9 +237,9 @@ class Network:
                             conn_id,
                             experiment_dir: str = "./logs"
                             ):
-        '''
+        """
         Get the paths of a traffic flow
-        '''
+        """
 
         current_path = {}
         # get source and destination of a connection
@@ -257,10 +258,10 @@ class Network:
                     auth=(self.onos_user, self.onos_pass)
             )
         except requests.exceptions.Timeout:
-            print('ERROR: The requests time out')
+            print("ERROR: The requests time out")
 
-        if paths.status_code == 200 and len(paths.json()['paths']) != 0:
-            all_paths = paths.json()['paths']
+        if paths.status_code == 200 and len(paths.json()["paths"]) != 0:
+            all_paths = paths.json()["paths"]
             # the "minus 1" below is because the difference between
             # the node id on gml file that start with 0, whereas
             # openflow/onos adopting an id staring with 1. Anyway
@@ -271,17 +272,17 @@ class Network:
                                     for link_id in range(len(all_paths[0]["links"]))
             ]
         else:
-            raise Exception('The flow paths has been not collected')
+            raise Exception("The flow paths has been not collected")
 
         all_traffic_metadata = {}
         flowpath_filename = f"{experiment_dir}/mininet_data.json"
         if os.path.isfile(flowpath_filename):
-            with open(flowpath_filename, "r", encoding='utf-8') as f:
+            with open(flowpath_filename, "r", encoding="utf-8") as f:
                 all_traffic_metadata = json.load(f)
-        if 'paths' in all_traffic_metadata.keys():
-            all_traffic_metadata['paths'].update(current_path)
+        if "paths" in all_traffic_metadata.keys():
+            all_traffic_metadata["paths"].update(current_path)
         else:
-            all_traffic_metadata['paths'] = current_path
+            all_traffic_metadata["paths"] = current_path
         # Writing paths to external file
-        with open(flowpath_filename, "w", encoding='utf-8') as f:
+        with open(flowpath_filename, "w", encoding="utf-8") as f:
             json.dump(all_traffic_metadata, f, indent=4)
