@@ -1,6 +1,7 @@
 """
 Script to create paper plots (accuracy)
 Created by Cláudio Modesto
+LASSE
 """
 
 import os
@@ -46,10 +47,11 @@ if VALID_TOPOLOGY:
     SAMPLES = 100
     accuracy = (correct_pred_w/SAMPLES) * 100
 
+    plt.figure(figsize=(9, 7))
     plt.subplots_adjust(hspace=0.4)
     plt.subplot(2, 1, 1)
     plt.ylabel("Accuracy (%)", fontsize=15)
-    plt.title("SLA violation predictions with NDT synchronization")
+    plt.title("SLA violation predictions with NDT synchronization", fontsize=17)
     plt.plot(accuracy, label="Accuracy")
     plt.scatter(all_cd[0][1:-1], [accuracy[acc-1] for acc in all_cd[0][1:-1]],
             marker='x', color='red', zorder=2, s=55,
@@ -64,7 +66,7 @@ if VALID_TOPOLOGY:
     plt.subplot(2, 1, 2)
     plt.yticks(fontsize=14)
     plt.xticks(fontsize=14)
-    plt.title("SLA violation predictions without NDT synchronization")
+    plt.title("SLA violation predictions without NDT synchronization", fontsize=17)
     plt.plot((correct_pred_wo/SAMPLES) * 100, label="Accuracy", color="green")
     plt.xlabel("Window index", fontsize=15)
     plt.ylabel("Accuracy (%)", fontsize=15)
@@ -72,5 +74,5 @@ if VALID_TOPOLOGY:
             marker='x', color='red', zorder=2, s=55,
             label="Concept drift")
     plt.legend()
-    plt.savefig(f"figures/accuray_plot_{args.topology}.pdf", bbox_inches="tight")
+    plt.savefig(f"figures/accuracy_plot_{args.topology}.pdf", bbox_inches="tight")
     
