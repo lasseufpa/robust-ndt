@@ -1,6 +1,7 @@
 """
 Script to plot related to plot concept drift detection
 Created by Cláudio Modesto
+LASSE
 """
 
 from matplotlib import pyplot as plt

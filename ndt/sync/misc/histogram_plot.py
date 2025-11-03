@@ -2,6 +2,7 @@
 Script to create paper histogram plots
 of the network characteristics
 Created by Cláudio Modesto
+LASSE
 """
 
 import networkx as nx
