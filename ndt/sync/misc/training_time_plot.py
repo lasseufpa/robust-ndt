@@ -1,6 +1,7 @@
 """
 Script to create paper plots (training time)
 Created by Cláudio Modesto
+LASSE
 """
 
 import os
