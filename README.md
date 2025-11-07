@@ -1,7 +1,10 @@
 # Towards a Robust Transport Network With a Self-adaptive Network Digital Twin
 📄 [Read the paper on arXiv](https://arxiv.org/abs/2507.20971)
 
-## Introduction
+## :bulb: Introduction
+
+![figure_1](https://github.com/lasseufpa/robust-ndt/blob/main/figures/figure_1.jpg?raw=true)
+
 The ability of the network digital twin (NDT) to remain aware of changes in its physical counterpart, known as the physical twin (PTwin), is a fundamental condition to enable timely synchronization, also referred to as twinning. In this way, considering a transport network, a key requirement is to handle unexpected traffic variability and dynamically adapt to maintain optimal performance in the associated virtual model, known as the virtual twin (VTwin).In this context, we propose a self-adaptive implementation of a novel NDT architecture designed to provide accurate delay predictions, even under fluctuating traffic conditions. This architecture addresses an essential challenge, underexplored in the literature: improving the resilience of data-driven NDT platforms against traffic variability and improving synchronization between the VTwin and its physical counterpart. 
 
 ## :toolbox: Repository directory structure
@@ -43,6 +46,8 @@ Flags:
 `--topo-filepath`: Path to `.gml` topology.
 
 `id`: Simple simulation index.
+
+Example of use, considering the current directory `physical_twin`
 ```bash
 sudo mn -c && sudo $(which python) generate_traffic.py --id 1 --topo-filepath topology/nsfnet_14.gml
 ```
@@ -80,7 +85,7 @@ Flags:
 sudo generate_metrics.py --dir experiments_100
 ```
 
-### :test_tube: Generate data to VTwin model
+### Generate data to VTwin model
 Finally, once the metrics were processed, you can generate data, typically input-output format to be used by the VTwin (GNN) model.
 
 Flags:
@@ -110,7 +115,7 @@ To generate the results and run the NDT for transport network with synchronizati
 
 `--target`: Type of QoS to be predicted.
 
-Example of use:
+Example of use, considering the current directory `ndt/sync`:
 
 ```bash
 python3 ndt_synchronization.py --topology 5g_crosshaul --dir delay_database --realization 10 --sync --target delay 
@@ -131,7 +136,7 @@ You can run the SLA monitoring application using the script `ndt_sync_w_app.py`.
 
 `--target`: Type of QoS to be predicted.
 
-Example of use:
+Example of use, considering the current directory `ndt/sync`:
 
 ```bash
 python3 ndt_sync_w_app.py --topology 5g_crosshaul --dir delay_database --realization 1 --sync 
