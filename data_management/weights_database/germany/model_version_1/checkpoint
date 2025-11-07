@@ -1,0 +1,2 @@
+model_checkpoint_path: "delay_final_weight"
+all_model_checkpoint_paths: "delay_final_weight"
