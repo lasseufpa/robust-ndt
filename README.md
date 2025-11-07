@@ -1,5 +1,4 @@
 # Towards a Robust Transport Network With a Self-adaptive Network Digital Twin
-📄 [Read the paper on arXiv](https://arxiv.org/abs/2507.20971)
 
 ## :bulb: Introduction
 
@@ -7,8 +6,12 @@
 
 The ability of the network digital twin (NDT) to remain aware of changes in its physical counterpart, known as the physical twin (PTwin), is a fundamental condition to enable timely synchronization, also referred to as twinning. In this way, considering a transport network, a key requirement is to handle unexpected traffic variability and dynamically adapt to maintain optimal performance in the associated virtual model, known as the virtual twin (VTwin).In this context, we propose a self-adaptive implementation of a novel NDT architecture designed to provide accurate delay predictions, even under fluctuating traffic conditions. This architecture addresses an essential challenge, underexplored in the literature: improving the resilience of data-driven NDT platforms against traffic variability and improving synchronization between the VTwin and its physical counterpart. 
 
-## :toolbox: Repository directory structure
+## :open_file_folder: Repository directory structure
 ```bash
+├── data_management -> directory with different scripts to process raw data and transform into tensorflow-like datasets
+│   ├── labeled_database -> Virtual twin directory to store labeled data for retraining process
+│   ├── traffic_database -> Virtual twin directory to store data used in the prediction process
+│   └── weights_database -> Virtual twin directory to store model weights after each training process
 ├── ndt
 │   ├── alone_training -> directory with standalone training script and VTwin declaration model
 │   └── sync
@@ -17,9 +20,9 @@ The ability of the network digital twin (NDT) to remain aware of changes in its 
 │       ├── jitter_database -> directory with database with jitter as the target metric
 │       ├── misc -> directory with plot scripts
 │       └── results -> directory with NDT operation across different realizations
-├── physical_twin -> directory with all scripts to generate traffin in the physical twin 
+└── physical_twin -> directory with all scripts to generate traffin in the physical twin 
 │   └── topologies -> directory with different transport network topologies in GML format
-└── data_management -> directory with different scripts to process raw data and transform into tensorflow-like datasets
+
 ```
 
 ## :writing_hand: Getting started
@@ -143,7 +146,7 @@ python3 ndt_sync_w_app.py --topology 5g_crosshaul --dir delay_database --realiza
 ```
 In this case, the SLA monitoring consider only the predicted per-flow delay to classify whether a flow is in compliance with its SLA. 
 
-## :bar_chart: Result Plots
+## :bar_chart: Result plots
 
 Several scripts in the `misc` directory can be used to reproduce the results from the paper:
 
