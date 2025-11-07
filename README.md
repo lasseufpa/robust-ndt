@@ -1,10 +1,10 @@
-# Towards a Robust Transport Network With Self-adaptive Network Digital Twin
-ArXiv link: https://arxiv.org/abs/2507.20971
+# Towards a Robust Transport Network With a Self-adaptive Network Digital Twin
+📄 [Read the paper on arXiv](https://arxiv.org/abs/2507.20971)
 
 ## Introduction
 The ability of the network digital twin (NDT) to remain aware of changes in its physical counterpart, known as the physical twin (PTwin), is a fundamental condition to enable timely synchronization, also referred to as twinning. In this way, considering a transport network, a key requirement is to handle unexpected traffic variability and dynamically adapt to maintain optimal performance in the associated virtual model, known as the virtual twin (VTwin).In this context, we propose a self-adaptive implementation of a novel NDT architecture designed to provide accurate delay predictions, even under fluctuating traffic conditions. This architecture addresses an essential challenge, underexplored in the literature: improving the resilience of data-driven NDT platforms against traffic variability and improving synchronization between the VTwin and its physical counterpart. 
 
-## Repository directory structure
+## :toolbox: Repository directory structure
 ```bash
 ├── ndt
 │   ├── alone_training -> directory with standalone training script and VTwin declaration model
@@ -14,13 +14,14 @@ The ability of the network digital twin (NDT) to remain aware of changes in its 
 │       ├── jitter_database -> directory with database with jitter as the target metric
 │       ├── misc -> directory with plot scripts
 │       └── results -> directory with NDT operation across different realizations
-└── traffic_generator -> directory with all scripts to generate raw and tensorflow-like data
-    └── topologies -> directory with different transport network topologies in GML format
+├── physical_twin -> directory with all scripts to generate traffin in the physical twin 
+│   └── topologies -> directory with different transport network topologies in GML format
+└── data_management -> directory with different scripts to process raw data and transform into tensorflow-like datasets
 ```
 
-## Getting started
+## :writing_hand: Getting started
 To install the python environment used to conduct the experiments, use the following command:
-### Install conda environment
+### :package: Install conda environment
 ```bash
 conda env create -f environment.yml
 ```
@@ -33,7 +34,7 @@ Once the environment installed, you need to instatiate a container with the SDN 
 sudo docker compose up -d
 ```
 
-## Data generation
+## :test_tube: Data generation
 The data generation is process that starts with the generation of the raw dataset using the D-ITG simulator using `generate_traffic.py`. However, this data generated, at this stage, is not suitable for training a deep learning model (VTwin). So, we need to extract all features available using `generate_metrics.py` script, to finally generate Tensorflow-like data, using `generate_data.py` script, to be used by the VTwin model. 
 
 ### Generate raw network traffic data with D-ITG
@@ -79,7 +80,7 @@ Flags:
 sudo generate_metrics.py --dir experiments_100
 ```
 
-### Generate data to VTwin model
+### :test_tube: Generate data to VTwin model
 Finally, once the metrics were processed, you can generate data, typically input-output format to be used by the VTwin (GNN) model.
 
 Flags:
@@ -92,14 +93,12 @@ Flags:
 python3 generate_data.py --input-dir [path-to-processed-dir] --output-dir [path-to-output-dir]
 ```
 
-## NDT operation
+## :gear: NDT operation
 
 To run a transport network NDT, you can use standlone script from `alone_training`, which there is no synchronization elements, or the scripts in `sync` directory with synchronization elements.
 
 ### NDT with synchronization
-To generate the results, you can run the `ndt_synchronization.py` script:
-
-Flags:
+To generate the results and run the NDT for transport network with synchronization, you can run the `ndt_synchronization.py` script. To customize this execution, you can use the following flags:
 
 `--topology`: Topology to be adopted in the NDT simulations.
 
@@ -111,6 +110,8 @@ Flags:
 
 `--target`: Type of QoS to be predicted.
 
+Example of use:
+
 ```bash
 python3 ndt_synchronization.py --topology 5g_crosshaul --dir delay_database --realization 10 --sync --target delay 
 ```
@@ -118,27 +119,39 @@ python3 ndt_synchronization.py --topology 5g_crosshaul --dir delay_database --re
 In the above example, the transport network NDT will running considering the 5G-Crosshaul, the QoS metric to be predicted will be the per-flow delay, and 10 traininig process realization will be taken.
 
 ### Application for SLA monitoring
+You can run the SLA monitoring application using the script `ndt_sync_w_app.py`. This application can running in different topologies, with different number of realization and with or without synchronization. To configure this, you can the following flags:
 
-## Generate result plots:
-Several scripts are available in the `misc` directory, that can be used to replicate the results used in this work. Below, there is a short description of each one.
+`--topology`: Topology to be adopted in the NDT simulations.
 
-`concept_drift_op_plot.py`: Script to generate plot with concept drift operation (points where a concept drift was detected) across the 5G-crosshaul, Germany and PASSION topologies.
+`--database`: Path to retraining data.
 
-`get_nmse_metrics.py`: Script to obtain the NMSE metrics across all NDT realizations.
+`--realization`: Number of independent realization to used in the simulations.
 
-`histogram_plot.py`: Script to plot the characteristics of each network topology, related to capacity and propagation delay characteristics.
+`--sync`: Flag to enable NDT synchronization.
 
-`single_plot.py`: Script to generate a single plot (only one topology) the NMSE performance in considering a scenario with and without synchronization.
+`--target`: Type of QoS to be predicted.
 
-`multiple_plots.py`: Script to generate the NMSE performance (two topologies) considering a scenario with and without synchronization architecture.
+Example of use:
 
-`sla_violations_plot.py`: Script to generate the results considering a network application (SLA monitoring) with and without the proposed synchronization architecture.
+```bash
+python3 ndt_sync_w_app.py --topology 5g_crosshaul --dir delay_database --realization 1 --sync 
+```
+In this case, the SLA monitoring consider only the predicted per-flow delay to classify whether a flow is in compliance with its SLA. 
 
-`training_time_plot.py`: Script to generate a plot related to the average retraining time (across all realization) for each topology after different concept drift event. 
+## :bar_chart: Result Plots
 
-`window_size_plot.py`: Script to generate a plot evaluating the number of concept drift detected considering different window size (a concept drift hyperparamenter).
+Several scripts in the `misc` directory can be used to reproduce the results from the paper:
 
-## Credits
+- `concept_drift_op_plot.py`: Visualizes concept drift detection across topologies (5G-Crosshaul, Germany, PASSION).
+- `get_nmse_metrics.py`: Computes NMSE metrics across all NDT realizations.
+- `histogram_plot.py`: Displays topology characteristics (capacity and propagation delay).
+- `single_plot.py`: Plots NMSE performance for a single topology.
+- `multiple_plots.py`: Compares NMSE performance across two topologies (with/without synchronization).
+- `sla_violations_plot.py`: Visualizes SLA monitoring results with and without synchronization.
+- `training_time_plot.py`: Shows average retraining time per topology after different concept drift events.
+- `window_size_plot.py`: Evaluates detected concept drifts across different window sizes (hyperparameter).
+
+## :information_source: Credits
 
 If you benefit from this work, please cite on your publications using:
 ```
