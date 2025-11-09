@@ -15,16 +15,17 @@ import networkx as nx
 from mininet.log import setLogLevel
 from network_scenario import Network
 
-def create_flows_description(number_nodes, net_topology, experiment_dir) -> dict:
+def create_flows_description(number_nodes, net_topology,
+                                experiment_dir, simulation_parameters) -> dict:
     """
     Create the description of traffic generation
     including the number of connections and streams
     """
     n_conn = 80 # number of server-client pairs
     n_streams = 1
-    duration = 9000
-    pattern = "pareto"
-    packet_size = 512
+    duration = simulation_parameters["duration"]
+    pattern = simulation_parameters["pattern"]
+    packet_size = simulation_parameters["pkt_size"]
     rng = np.random.default_rng()
     flows_description = {}
 
@@ -75,7 +76,7 @@ def create_flows_description(number_nodes, net_topology, experiment_dir) -> dict
 
     return flows_description
 
-def main(identifier: int, topo_filepath: str):
+def main(identifier: int, topo_filepath: str, simulation_parameters: dict):
     """
     main script for generate traffic
     """
@@ -99,7 +100,8 @@ def main(identifier: int, topo_filepath: str):
     network = Network(topo_file=topo_filepath, topo_params=topo_params)
     flows_description = create_flows_description(len(network.net.hosts),
                                                 net_topology,
-                                                experiment_dir)
+                                                experiment_dir,
+                                                simulation_parameters)
     print("Flows description:\n", flows_description)
     network.start(
         time_wait_topology=time_wait_topology,
@@ -109,11 +111,24 @@ def main(identifier: int, topo_filepath: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the traffic generator")
-    parser.add_argument("--id", type=int, required=True, help="Experiment identifier")
-    parser.add_argument("--topo-filepath",
-                        type=str,
-                        required=True,
-                        help="Network topology .gml file")
+    parser.add_argument("--id", type=int, required=True,
+                            help="Experiment identifier")
+    parser.add_argument("--duration", type=int, required=True,
+                            help="Simulation total time in seconds")
+    parser.add_argument("--pattern", type=str,
+                            default="exponential", required=False,
+                            help="Type of traffic pattern \
+                            (exp | normal | poisson | pareto | gamma | burts)")
+    parser.add_argument("--pkt-size", type=int,
+                            default=128, required=False,
+                            help="Packet size in bytes")
+    parser.add_argument("--topo-filepath", type=str, required=True,
+                            help="Network topology .gml file")
+
     args = parser.parse_args()
 
-    main(args.id, args.topo_filepath)
+    simulation_parameters = {"duration": args.duration,
+                            "pattern": args.pattern,
+                            "pkt_size": args.pkt_size}
+
+    main(args.id, args.topo_filepath, simulation_parameters)
