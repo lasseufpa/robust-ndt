@@ -65,7 +65,7 @@ Flags:
 
 `--id`: Simple simulation index.
 
-`--pattern`: Type of traffic pattern which can (`exp` | `normal` | `poisson` | `pareto` | `gamma` | `burts`).
+`--pattern`: Type of traffic pattern which can (`exp` | `normal` | `poisson` | `pareto` | `gamma` | `burst`).
 
 `--pkt-size`: Packet size in bytes.
 
