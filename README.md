@@ -63,12 +63,20 @@ Flags:
 
 `--topo-filepath`: Path to `.gml` topology.
 
-`id`: Simple simulation index.
+`--id`: Simple simulation index.
+
+`--pattern`: Type of traffic pattern which can (`exp` | `normal` | `poisson` | `pareto` | `gamma` | `burts`).
+
+`--pkt-size`: Packet size in bytes.
+
+`--duration`: Total simulation time in seconds.
 
 Example of use, considering the current directory `physical_twin`
 ```bash
-sudo mn -c && sudo $(which python) generate_traffic.py --id 1 --topo-filepath topology/nsfnet_14.gml
+generate_traffic.py --id 1 --topo-filepath topologies/nsfnet_14.gml --pattern exp --pkt-size 512 --duration 20
 ```
+
+The command above will generate a network traffic in the NSFNet topology, with packet rate and packet size following an exponential distribution, and a total duration of 20 seconds.
 
 :warning: The dataset generated from this command can consume to much space. Ensure you have enough space for large simulations.
 
@@ -108,9 +116,9 @@ Finally, once the metrics were processed, you can generate data, typically input
 
 Flags:
 
-`--input-dir`: Path to processed metrics
+`--input-dir`: Path to processed metrics.
 
-`--output-dir`: Path to output dataset
+`--output-dir`: Path to output dataset.
 
 ```bash
 python3 generate_data.py --input-dir [path-to-processed-dir] --output-dir [path-to-output-dir]
@@ -136,7 +144,7 @@ To generate the results and run the NDT for transport network with synchronizati
 Example of use, considering the current directory `ndt/sync`:
 
 ```bash
-python3 ndt_synchronization.py --topology 5g_crosshaul --dir delay_database --realization 10 --sync --target delay 
+python3 ndt_synchronization.py --topology topologies/5g_crosshaul --dir delay_database --realization 10 --sync --target delay 
 ```
 
 In the above example, the transport network NDT will running considering the 5G-Crosshaul, the QoS metric to be predicted will be the per-flow delay, and 10 traininig process realization will be taken.
