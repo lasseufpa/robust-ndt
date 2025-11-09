@@ -57,7 +57,7 @@ if VALID_TOPOLOGY:
             marker='x', color='red', zorder=2, s=55,
             label="Concept drift")
     plt.scatter(new_model, [accuracy[update] for update in new_model],
-            marker='x', color='green', zorder=2, s=55,
+            marker='x', color='black', zorder=2, s=55,
             label="New VTwin")
 
     plt.yticks(fontsize=14)
