@@ -59,12 +59,13 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
         pathlib.Path(weights_path_name).mkdir(parents=True, exist_ok=True)
 
     model_version = 0
-    training_data = [f"{root_data_dir}/{topology}/{dataset_name}0_cv",
-                    f"{root_data_dir}/{topology}/{dataset_name}1_cv",
-                    f"{root_data_dir}/{topology}/{dataset_name}2_cv",
-                    f"{root_data_dir}/{topology}/{dataset_name}4_cv"]
+    training_data_path = f"{root_data_dir}/labeled_database/{target}_database/{topology}/{dataset_name}"
+    training_data = [f"{training_data_path}0_cv",
+                    f"{training_data_path}1_cv",
+                    f"{training_data_path}2_cv",
+                    f"{training_data_path}4_cv"]
 
-    model_weights_dir = f"weights/{topology}/model_version"
+    model_weights_dir = f"../../data_management/weights_database/{topology}/model_version"
 
     if not os.path.isfile(f"{model_weights_dir}_{model_version}/{target}_final_weight.index"):
         print("Training the initial model!!")
@@ -76,10 +77,11 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
                                     realization=realization,
                                     target=target)
 
-    stream_data_dir = [f"{root_data_dir}/{topology}/{dataset_name}0_cv/testing",
-                        f"{root_data_dir}/{topology}/{dataset_name}1_cv/testing",
-                        f"{root_data_dir}/{topology}/{dataset_name}2_cv/testing",
-                        f"{root_data_dir}/{topology}/{dataset_name}4_cv/testing"]
+    stream_data_path = f"{root_data_dir}/traffic_database/{target}_database/{topology}/{dataset_name}"
+    stream_data_dir = [f"{stream_data_path}0_cv/testing",
+                        f"{stream_data_path}1_cv/testing",
+                        f"{stream_data_path}2_cv/testing",
+                        f"{stream_data_path}4_cv/testing"]
 
     weight_filename = f"{model_weights_dir}_{model_version}/{target}_final_weight.index"
     last_weight_id = os.path.getmtime(weight_filename)
