@@ -32,13 +32,28 @@ To install the python environment used to conduct the experiments, use the follo
 conda env create -f environment.yml
 ```
 
-
-Once the environment installed, you need to instatiate a container with the SDN controller (ONOS). It is necessary only if you would like to generate traffic datasets:
+Once the environment installed, you need to instatiate a container with the SDN controller (ONOS). Noteworthy that this is necessary only if you would like to generate traffic datasets. So, considering the current directory `physical_twin`, you can run the following command:
 
 ### Instantiate ONOS docker container
 ```
 sudo docker compose up -d
 ```
+
+You can also access the ONOS graphical interface in your browser, using the following URL:
+
+```
+http://<your-ip>:8181/onos/ui/login.html
+```
+
+Where, `<your-ip>` is the machine IP where ONOS is running. 
+
+Furthermore, the default credentials to login into the SDN controller GUI is:
+
+```
+user: onos
+password: rocks
+```
+
 
 ## :test_tube: Data generation
 The data generation is process that starts with the generation of the raw dataset using the D-ITG simulator using `generate_traffic.py`. However, this data generated, at this stage, is not suitable for training a deep learning model (VTwin). So, we need to extract all features available using `generate_metrics.py` script, to finally generate Tensorflow-like data, using `generate_data.py` script, to be used by the VTwin model. 
