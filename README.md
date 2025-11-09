@@ -85,7 +85,7 @@ The command above will generate a network traffic in the NSFNet topology, with p
 The table below describe the characteristics of the datasets generated.
 
 | # | Traffic pattern  | Topology      | Raw dataset id      | Number of flows (T) |
-|---|------------------|---------------|---------------------|---------------------|
+|---|:----------------:|:-------------:|:-------------------:|:-------------------:|
 |   |                  | 5G-Crosshaul  |experiment_100       | 121,400             |
 | 1 |Exponential       | Germany       |experiment_200       | 129,600             |
 |   |                  | PASSION       |experiment_300       | 129,600             |
