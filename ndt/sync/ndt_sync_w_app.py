@@ -61,7 +61,7 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
         pathlib.Path(weights_path_name).mkdir(parents=True, exist_ok=True)
 
     model_version = 0
-    training_data_path = f"{root_data_dir}/labeled_database/{target}_database/{topology}/{dataset_name}"
+    training_data_path = f"{root_data_dir}/labeled_database/{target}_app_database/{topology}/{dataset_name}"
     training_data = [f"{training_data_path}0_cv",
                     f"{training_data_path}1_cv",
                     f"{training_data_path}2_cv",
@@ -69,7 +69,7 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
 
     model_weights_dir = f"../../data_management/weights_database/{topology}/model_version"
 
-    if not os.path.isfile(f"{model_weights_dir}_{model_version}/final_weight.index"):
+    if not os.path.isfile(f"{model_weights_dir}_{model_version}/{target}_final_weight.index"):
         untrained_model = load_untrained_model(target)
         initial_training_vtwin(training_data[model_version],
                                             untrained_model,
@@ -78,13 +78,13 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
                                             topology=topology,
                                             target=target)
 
-    stream_data_path = f"{root_data_dir}/traffic_database/{target}_database/{topology}/{dataset_name}"
+    stream_data_path = f"{root_data_dir}/traffic_database/{target}_app_database/{topology}/{dataset_name}"
     stream_data_dir = [f"{stream_data_path}0_cv/testing",
                         f"{stream_data_path}1_cv/testing",
                         f"{stream_data_path}2_cv/testing",
                         f"{stream_data_path}4_cv/testing"]
 
-    weight_filename = f"{model_weights_dir}_{model_version}/final_weight.index"
+    weight_filename = f"{model_weights_dir}_{model_version}/{target}_final_weight.index"
     last_weight_id = os.path.getmtime(weight_filename)
     stream_data = tf.data.Dataset.load(f"{stream_data_dir[0]}", compression="GZIP")
 
@@ -94,7 +94,7 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
         stream_data = stream_data.concatenate(new_data)
 
     trained_model = load_trained_model(training_data[model_version],
-                                        f"{model_weights_dir}_{model_version}/final_weight",
+                                        f"{model_weights_dir}_{model_version}/{target}_final_weight",
                                         target)
     indexes, points = [], []
     flow_id = 0
@@ -113,7 +113,7 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
         gt_sla_violations = 0
         correct_pred = 0
         stream_data_sample = (sample_features, labels)
-        weight_filename = f"{model_weights_dir}_{model_version}/final_weight.index"
+        weight_filename = f"{model_weights_dir}_{model_version}/{target}_final_weight.index"
 
         # update virtual twin model
         if (os.path.isfile(weight_filename) and \
@@ -125,7 +125,7 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
             last_weight_id = os.path.getmtime(weight_filename)
             print(f"Model version {model_version} in production")
             trained_model = load_trained_model(training_data[model_version],
-                                    f"{model_weights_dir}_{model_version}/final_weight",
+                                    f"{model_weights_dir}_{model_version}/{target}_final_weight",
                                     target)
 
         predicted_delay, _ = predicting_vtwin(trained_model, stream_data_sample)
@@ -143,17 +143,17 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
         all_correct_pred.append(correct_pred)
 
         for flow_traffic in sample_features["flow_traffic"].numpy():
-            print(flow_id)
+            print("\r Analyzing flow ID: ", flow_id, end="", flush=True)
             kswin.update(flow_traffic)
             if sync and kswin.drift_detected and not async_running:
                 drift_detected.append(window_index)
                 if model_version + 2 > len(training_data):
                     break
-                print("DRIFT detected")
+                print("\n\033[31m=> Drift detected\033[0m")
                 convey_time = 0.8
                 indexes.append(flow_id)
                 points.append(sample_features["flow_traffic"].numpy())
-                print("Retraing the model")
+                print("\033[32m=> Retraining the VTwin\033[0m")
                 async_running = True
                 model_version += 1
                 model_training = subprocess.Popen(["python3", "std_train.py",
@@ -170,7 +170,8 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
         window_index += 1
     if model_training is not None:
         model_training.kill()
-    print("Saving Error Metrics")
+    print("\n=> Assessement finished!")
+    print("=> Saving error Metrics")
     with open(f"results/{topology}/uc_violations_{sync}_r_{realization}.npz", "wb") as f:
         np.savez(f, pred_all_sla_violations, gt_all_sla_violations,
                             all_correct_pred, drift_detected, model_updated)
