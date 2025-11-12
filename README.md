@@ -144,7 +144,7 @@ To generate the results and run the NDT for transport network with synchronizati
 Example of use, considering the current directory `ndt/sync`:
 
 ```bash
-python3 ndt_synchronization.py --topology topologies/5g_crosshaul --dir delay_database --realization 10 --sync --target delay 
+python3 ndt_synchronization.py --topology 5g_crosshaul --dir ../../data_management --realization 10 --sync --target delay 
 ```
 
 In the above example, the transport network NDT will running considering the 5G-Crosshaul, the QoS metric to be predicted will be the per-flow delay, and 10 traininig process realization will be taken.
@@ -165,7 +165,7 @@ You can run the SLA monitoring application using the script `ndt_sync_w_app.py`.
 Example of use, considering the current directory `ndt/sync`:
 
 ```bash
-python3 ndt_sync_w_app.py --topology 5g_crosshaul --dir delay_database --realization 1 --sync 
+python3 ndt_sync_w_app.py --topology 5g_crosshaul --dir ../../data_management --realization 1 --sync 
 ```
 In this case, the SLA monitoring consider only the predicted per-flow delay to classify whether a flow is in compliance with its SLA. 
 
