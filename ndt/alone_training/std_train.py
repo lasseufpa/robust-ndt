@@ -52,12 +52,10 @@ def get_default_hyperparams() -> Dict[str, Any]:
     """Returns the default hyperparameters for the training of the models. That is
     - Adam optimizer with lr=0.001
     - MeanAbsolutePercentageError loss
-    - No additional metrics
     - EarlyStopping and ReduceLROnPlateau callbacks
-    - 100 epochs
     """
     return {
-        "optimizer": tf.keras.optimizers.Adam(learning_rate=0.001),
+        "optimizer": tf.keras.optimizers.AdamW(learning_rate=0.001),
         "loss": tf.keras.losses.MeanAbsolutePercentageError(),
         "metrics": ['MeanAbsolutePercentageError'],
         "additional_callbacks": get_default_callbacks(),
@@ -68,12 +66,13 @@ def get_default_hyperparams() -> Dict[str, Any]:
 def get_mean_std_dict(
     ds: tf.data.Dataset, params: List[str], include_y: Optional[str] = None
 ) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
-    """Get the min and the max-min for different parameters of a dataset. Later used by the models for the min-max normalization.
+    """Get the min and the mean-std for different parameters of a dataset. 
+    Later used by the models for the z-score normalization.
 
     Parameters
     ----------
     ds : tf.data.Dataset
-        Training dataset where to base the min-max normalization from.
+        Training dataset where to base the mean-std normalization from.
 
     params : List[str]
         List of strings indicating the parameters to extract the features from.
@@ -86,7 +85,7 @@ def get_mean_std_dict(
     Returns
     -------
     Dict[str, Tuple[np.ndarray, np.ndarray]]
-        Dictionary containing the values needed for the min-max normalization.
+        Dictionary containing the values needed for the z-score normalization.
         The first value is the min value of the parameter, and the second is 1 / (max - min).
     """
 
@@ -116,7 +115,7 @@ def get_mean_std_dict(
         if all(std_val) == 0:
             scores[param] = [mean_val, std_val]
         else:
-            scores[param] = [mean_val, 1/std_val]
+            scores[param] = [mean_val, 1/(std_val)]
 
     return scores
 
@@ -131,7 +130,6 @@ def train_and_evaluate(
     epochs: int = 100,
     ckpt_path: Optional[str] = None,
     tensorboard_path: Optional[str] = None,
-    restore_ckpt: bool = False,
     final_eval: bool = True,
 ) -> Tuple[tf.keras.Model, Union[float, np.ndarray, None]]:
     """
@@ -174,10 +172,6 @@ def train_and_evaluate(
     tensorboard_path : Optional[str], optional
         Path where to store tensorboard logs, by default "{repository root}/tensorboard/{model name}"
 
-    restore_ckpt : bool, optional
-        If True, before training the model, it is checked if there is a checkpoint file in the ckpt_path.
-        If so, the model loads the latest checkpoint and continues training from there. By default False.
-
     final_eval : bool, optional
         If True, the model is evaluated on the validation dataset one last time after training, by default True
 
@@ -204,7 +198,7 @@ def train_and_evaluate(
     if tensorboard_path is None:
         tensorboard_path = f"tensorboard/{model.name}"
 
-    # Apply min-max normalization
+    # Apply z-score normalization
     model.set_mean_std_scores(get_mean_std_dict(ds_train, model.mean_std_scores_fields))
 
     # Compile model
@@ -214,19 +208,7 @@ def train_and_evaluate(
         metrics=metrics,
         run_eagerly=RUN_EAGERLY,
     )
-    # Load checkpoint
-    if restore_ckpt:
-        ckpt = tf.train.latest_checkpoint(ckpt_path)
-        if ckpt is not None:
-            print("Restoring from checkpoint")
-            model.load_weights(ckpt)
-        else:
-            print(
-                f"WARNING: No checkpoint was found at '{ckpt_path}', training from scratch instead..."
-            )
-    else:
-        print("restore_ckpt = False, training from scratch")
-
+    
     #Create callbacks
     ckpt_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=os.path.join(ckpt_path, "final_weight"),
@@ -239,13 +221,15 @@ def train_and_evaluate(
         log_dir=tensorboard_path, histogram_freq=1
     )
 
+    nan_callback = tf.keras.callbacks.TerminateOnNaN(),
+
     # Train model
     model.fit(
         ds_train,
         validation_data=ds_val,
         epochs=epochs,
         verbose=1,
-        callbacks=[ckpt_callback, tensorboard_callback] + additional_callbacks,
+        callbacks=[ckpt_callback, tensorboard_callback, nan_callback] + additional_callbacks,
         use_multiprocessing=True,
     )
 
@@ -260,7 +244,6 @@ if __name__ == "__main__":
         description="Train a model for flow delay prediction"
     )
     parser.add_argument("--ckpt-path", type=str, required=True)
-    # --ds-train ../traffic_generator/mgen/tf_data/mgen_1_cv/0/
     parser.add_argument("--ds-train", type=str, required=True)
 
     args = parser.parse_args()
