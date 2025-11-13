@@ -131,7 +131,7 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
                 if model_version + 2 > len(training_data):
                     break
                 print("\n\033[31m=> Drift detected\033[0m")
-                convey_time = 0.8
+                convey_time = 1
                 indexes.append(flow_id)
                 points.append(sample_features["flow_traffic"].numpy())
                 print("\033[32m=> Retraining the VTwin\033[0m")
