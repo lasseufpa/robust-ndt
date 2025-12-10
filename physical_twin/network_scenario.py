@@ -196,41 +196,19 @@ class Network:
             elif conn_info["pattern"] == "gamma":
                 pattern = f"-G 0.5 {mean} -g 0.5 {packet_size}"
             else:
-                raise Exception("Pattern did not found!")
-            
+                raise ValueError("Pattern did not found!")
+
             duration = conn_info["duration"]
             mn_src_host.cmd(f"ITGSend -T {protocol} \
-                                        -a 10.0.0.{dst_host} \
+                                        -a 10.0.{dst_host // 256}.{dst_host % 256} \
                                         {pattern} \
                                         -t {duration}000 \
                                         -x {experiment_dir}/{conn_id}_traffic_results_rx.log &")
-
+            
             info(f"Saving flow paths of connection {conn_id}\n")
-            sleep(4)
+            sleep(5)
             self.get_flow_paths(conn_info, conn_id, experiment_dir)
         sleep(duration)
-
-    def admission_control(self, conn_info, conn_id, experiment_dir: str = "./logs"):
-        # get source and destination of a connection
-        src_host = conn_info["src"] + 1
-        dst_host = conn_info["dst"] + 1
-
-        # convert to 16-char hexadecimal URI
-        # using by ONOS to identify a device
-        src_host_id = f"{src_host:016x}"
-        dst_host_id = f"{dst_host:016x}"
-
-        try:
-            paths = requests.get(
-                self.onos_api_adress + f"/flows",
-                    timeout=10,
-                    auth=(self.onos_user, self.onos_pass)
-            )
-        except requests.exceptions.Timeout:
-            print("ERROR: The requests time out")
-
-        paths.json().get("flows", [])
-        
 
 
     def get_flow_paths(self, conn_info,
