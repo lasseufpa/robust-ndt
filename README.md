@@ -118,10 +118,14 @@ Flags:
 
 `--input-dir`: Path to processed metrics.
 
-`--output-dir`: Path to output dataset.
+`--target`: Type of target label used in the dataset can be `delay | jitter`.
+
+`--topology-name`: Name of the topology used.
+
+`--name`: Name of the dataset
 
 ```bash
-python3 generate_data.py --input-dir [path-to-processed-dir] --output-dir [path-to-output-dir]
+python3 generate_data.py --input-dir ../physical_twin/logs/experiment_100/ --target delay --name experiment_504 --topology-name random
 ```
 
 ## :gear: NDT operation
