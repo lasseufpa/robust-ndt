@@ -204,9 +204,9 @@ class Network:
                                         {pattern} \
                                         -t {duration}000 \
                                         -x {experiment_dir}/{conn_id}_traffic_results_rx.log &")
-            
+
             info(f"Saving flow paths of connection {conn_id}\n")
-            sleep(5)
+            sleep(4)
             self.get_flow_paths(conn_info, conn_id, experiment_dir)
         sleep(duration)
 
@@ -250,6 +250,7 @@ class Network:
                                     for link_id in range(len(all_paths[0]["links"]))
             ]
         else:
+            os.system("sudo mn -c") # remove all switches and links
             raise Exception("The flow paths has been not collected")
 
         all_traffic_metadata = {}
