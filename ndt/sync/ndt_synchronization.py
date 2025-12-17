@@ -41,6 +41,9 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
     elif topology == "passion":
         dataset_name = "experiment_30"
         window_size = 6800
+    elif topology == "random":
+        dataset_name = "experiment_40"
+        window_size = 10000
     else:
         raise ValueError("This is not a supported topology!")
 

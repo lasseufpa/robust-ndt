@@ -43,6 +43,9 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
     elif topology == "passion":
         dataset_name = "experiment_30"
         window_size = 6800
+    elif topology == "random":
+        dataset_name = "experiment_40"
+        window_size = 10000
     else:
         raise ValueError("This is not a supported topology!")
 
@@ -120,7 +123,7 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
             os.path.getmtime(weight_filename) > last_weight_id \
                                         and sync \
                                         and not async_running):
-            print("New model")
+            print("\nNew model")
             model_updated.append(window_index)
             last_weight_id = os.path.getmtime(weight_filename)
             print(f"Model version {model_version} in production")
@@ -150,7 +153,7 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
                 if model_version + 2 > len(training_data):
                     break
                 print("\n\033[31m=> Drift detected\033[0m")
-                convey_time = 0.8
+                convey_time = 1
                 indexes.append(flow_id)
                 points.append(sample_features["flow_traffic"].numpy())
                 print("\033[32m=> Retraining the VTwin\033[0m")
@@ -159,12 +162,14 @@ def main_loop(realization: int, target: str, data_dir, topology, sync):
                 model_training = subprocess.Popen(["python3", "std_train.py",
                                 "--ds-train", f"{training_data[model_version]}",
                                 "--ckpt-path", f"{model_weights_dir}_{model_version}",
-                                "--topology", f"{topology}"])
+                                "--topology", f"{topology}",
+                                "--realization", f"{realization}",
+                                "--target", f"{target}"])
             flow_id += 1
             if flow_id > window_size - 200:
                 sleep(convey_time)
             if async_running and model_training.poll() is not None:
-                print("Retraining is over")
+                print("\nRetraining is over")
                 convey_time = 0 # accelerating the simulation when a retraining isn't running
                 async_running = False
         window_index += 1
