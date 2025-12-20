@@ -18,7 +18,8 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-all_cd = [[0, 68, 131, 194, 251], [0, 72, 143, 211, 246], [0, 72, 135, 198, 267]]
+all_cd = [[0, 68, 131, 194, 251], [0, 72, 143, 211, 246],
+                        [0, 72, 135, 198, 267], [0, 95, 203, 293, 397]]
 
 ROOT_DIR = "../results" # path to root database directory
 # Create the output directory
@@ -30,16 +31,28 @@ ROOT_DIR = "../results"
 
 VALID_TOPOLOGY = False
 if (args.topology == "5g_crosshaul" or args.topology == "germany" or
-                    args.topology == "passion"):
+                    args.topology == "passion" or args.topology == "random"):
     VALID_TOPOLOGY = True
 else:
-    raise ValueError("Choose a valid topology!")
+    raise ValueError("You should choose a valid topology!")
+
+if args.topology == "5g_crosshaul":
+    cd_index = all_cd[0]
+elif args.topology == "germany":
+    cd_index = all_cd[1]
+elif args.topology == "passion":
+    cd_index = all_cd[2]
+elif args.topology == "random":
+    cd_index = all_cd[3]
 
 if VALID_TOPOLOGY:
     with open(f"{ROOT_DIR}/{args.topology}/uc_violations_True_r_0.npz", "rb") as f:
         pred_sla_violations_w_cd = np.load(f)['arr_0']
+        gt_flows_in_violation = np.load(f)["arr_1"]
         correct_pred_w = np.load(f)['arr_2']
         new_model = np.load(f)['arr_4']
+
+    print("Flows in violations: ", sum(gt_flows_in_violation))
 
     with open(f"{ROOT_DIR}/{args.topology}/uc_violations_False_r_0.npz", "rb") as f:
         correct_pred_wo = np.load(f)['arr_2']
@@ -47,13 +60,22 @@ if VALID_TOPOLOGY:
     SAMPLES = 100
     accuracy = (correct_pred_w/SAMPLES) * 100
 
+    total_accuracy_w_cd = sum(correct_pred_w) / (len(correct_pred_w) * 100)
+    total_accuracy_wo_cd = sum(correct_pred_wo) / (len(correct_pred_wo) * 100)
+    print(f"Number of flows correctly classified with sync: {sum(correct_pred_w)}")
+    print(f"Number of flows misclassified with sync: {len(correct_pred_w) * 100 - sum(correct_pred_w)}")
+    print(f"Number of flows correctly classified without sync: {sum(correct_pred_wo)}")
+    print(f"Number of flows misclassified without sync: {len(correct_pred_wo) * 100 - sum(correct_pred_wo)}")
+    print(f"Accuracy with sync: {total_accuracy_w_cd}")
+    print(f"Accuracy without sync: {total_accuracy_wo_cd}")
+
     plt.figure(figsize=(9, 7))
     plt.subplots_adjust(hspace=0.4)
     plt.subplot(2, 1, 1)
     plt.ylabel("Accuracy (%)", fontsize=15)
     plt.title("SLA violation predictions with NDT synchronization", fontsize=17)
     plt.plot(accuracy, label="Accuracy")
-    plt.scatter(all_cd[0][1:-1], [accuracy[acc-1] for acc in all_cd[0][1:-1]],
+    plt.scatter(cd_index[1:-1], [accuracy[acc-1] for acc in cd_index[1:-1]],
             marker='x', color='red', zorder=2, s=55,
             label="Concept drift")
     plt.scatter(new_model, [accuracy[update] for update in new_model],
@@ -70,7 +92,7 @@ if VALID_TOPOLOGY:
     plt.plot((correct_pred_wo/SAMPLES) * 100, label="Accuracy", color="green")
     plt.xlabel("Window index", fontsize=15)
     plt.ylabel("Accuracy (%)", fontsize=15)
-    plt.scatter(all_cd[0][1:-1], [accuracy[acc-1] for acc in all_cd[0][1:-1]],
+    plt.scatter(cd_index[1:-1], [accuracy[acc-1] for acc in cd_index[1:-1]],
             marker='x', color='red', zorder=2, s=55,
             label="Concept drift")
     plt.legend()
