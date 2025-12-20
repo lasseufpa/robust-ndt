@@ -6,6 +6,8 @@ LASSE
 """
 
 import json
+import os
+import pathlib
 import glob
 import copy
 import argparse
@@ -246,19 +248,23 @@ def generate_tf_data(experiment_path, target):
     return ds
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run the traffic generator")
+    parser = argparse.ArgumentParser(description="Run the dataset generator")
     parser.add_argument("--input-dir",
                         type=str,
                         required=True,
                         help="Path to experiment files")
-    parser.add_argument("--output-dir",
-                        type=str,
-                        required=True,
-                        help="Path to output directory")
     parser.add_argument("--target",
                         type=str,
                         required=True,
                         help="Type of QoS metric to be target label")
+    parser.add_argument("--name",
+                        type=str,
+                        required=True,
+                        help="Dataset name")
+    parser.add_argument("--topology-name",
+                        type=str,
+                        required=True,
+                        help="Name of the topology used")
     args = parser.parse_args()
 
     # saving tensorflow input-output data
@@ -267,16 +273,27 @@ if __name__ == "__main__":
         args.input_dir,
         args.target
     ),
-    args.output_dir,
-    compression="GZIP",
+    f"labeled_database/{args.target}_database/{args.topology_name}/{args.name}/all",
+        compression="GZIP",
     )
-    N_FOLDS = 20 # used to divide trainig and testing datasets 
-    # Split dataset into n folds
-    ds = tf.data.Dataset.load(args.output_dir, compression="GZIP")
+    N_FOLDS = 20 # used to divide trainig and testing datasets
+
+    ds = tf.data.Dataset.load(f"labeled_database/{args.target}_database/{args.topology_name}/{args.name}/all",
+                                compression="GZIP")
     ds_split = [ds.shard(N_FOLDS, ii) for ii in range(N_FOLDS)]
-    dataset_name = (
-        args.output_dir if args.output_dir[-1] != "/" else args.output_dir[:-1]
-    )
+
+    LABELED_DATA_PATH = f"labeled_database/{args.target}_database/"
+    if os.path.isfile(LABELED_DATA_PATH):
+        os.remove(LABELED_DATA_PATH)
+    else:
+        pathlib.Path(LABELED_DATA_PATH).mkdir(parents=True, exist_ok=True)
+
+    TRAFFIC_DATA_PATH = f"traffic_database/{args.target}_database/"
+    if os.path.isfile(TRAFFIC_DATA_PATH):
+        os.remove(TRAFFIC_DATA_PATH)
+    else:
+        pathlib.Path(TRAFFIC_DATA_PATH).mkdir(parents=True, exist_ok=True)
+
 
     VAL_IDX = 1
     TEST_IDX = 0
@@ -289,14 +306,14 @@ if __name__ == "__main__":
     ds_train = ds_split[2]
     for jj in tr_splits[3:]:
         ds_train = ds_train.concatenate(ds_split[jj])
+
     # Save datasets
     tf.data.Dataset.save(
-        ds_train, f"{dataset_name}_cv/training", compression="GZIP"
-    )
+        ds_train, f"labeled_database/{args.target}_database/{args.topology_name}/{args.name}_cv/training",
+        compression="GZIP")
     tf.data.Dataset.save(
-        ds_val, f"{dataset_name}_cv/validation", compression="GZIP"
-    )
+        ds_val, f"labeled_database/{args.target}_database/{args.topology_name}/{args.name}_cv/validation",
+        compression="GZIP")
     tf.data.Dataset.save(
-        ds_test, f"{dataset_name}_cv/testing", compression="GZIP"
-    )
-    
+        ds_test, f"traffic_database/{args.target}_database/{args.topology_name}/{args.name}_cv/testing",
+        compression="GZIP")
