@@ -11,26 +11,24 @@ import tensorflow as tf
 import numpy as np
 from river import drift
 
-ROOT_DIR = "../delay_database" # path to root database directory
+ROOT_DIR = "../../../data_management/traffic_database/delay_database" # path to root database directory
 # Create the output directory
 OUTPUT_PATH_NAME = "figures"
 if not os.path.isdir(OUTPUT_PATH_NAME):
     pathlib.Path(OUTPUT_PATH_NAME).mkdir(parents=True, exist_ok=True)
 
-window_sizes = [6800, 7000, 6800]
-topologies = ["5G-Crosshaul", "Germany", "PASSION"]
-sub_paths = ["5g_crosshaul", "germany", "passion"]
+window_sizes = [6800, 7000, 6800, 10000]
+topologies = ["5G-Crosshaul", "Germany", "PASSION", "Random"]
+sub_paths = ["5g_crosshaul", "germany", "passion", "random"]
 traffic_labels = ["Exponential", "Poisson", "Uniform", "Normal", "Congested"]
-N_OF_TOPOLOGIES = 3
+N_OF_TOPOLOGIES = 4
 N_OF_PATTERN = 4
 for i in range(1, N_OF_TOPOLOGIES+1):
     ds_path = f"{ROOT_DIR}/{sub_paths[i-1]}/experiment"
     all_flow_traffic = []
-    plt.subplot(3, 1, i)
+    plt.subplot(len(topologies), 1, i)
     print(f"{topologies[i-1]}")
     plt.title(f"{topologies[i-1]}")
-    if i == 2:
-        plt.ylabel("Goodput (Mbits/s)", fontsize=15)
     start = 0
     ds = tf.data.Dataset.load(f"{ds_path}_{i}00_cv/testing", compression="GZIP")
     for j in range(1, N_OF_PATTERN+2):
@@ -55,10 +53,12 @@ for i in range(1, N_OF_TOPOLOGIES+1):
         kswin.update(sample)
         if kswin.drift_detected:
             plt.scatter(idx, sample, zorder=2, s=60, marker="X", color="black", label="Drift detected")
+    print(f"Dataset size: {len(all_flow_traffic) - 3}")
 plt.xlabel("Time (s)", fontsize=15)
+plt.gcf().supylabel("Traffic rate (Mbits/s)", fontsize=15)
 plt.tight_layout()
 handles, labels = plt.gca().get_legend_handles_labels()
 by_label = dict(zip(labels, handles))
-plt.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1.1, -0.5), ncol=5)
-plt.savefig("figures/flow_traffic.pdf", bbox_inches="tight")
+plt.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1.1, -1), ncol=5)
+plt.savefig("figures/concept_drif_op_plot.pdf", bbox_inches="tight")
 plt.close()
