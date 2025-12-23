@@ -130,7 +130,7 @@ Flags:
 `--name`: Name of the dataset
 
 ```bash
-python3 generate_data.py --input-dir ../physical_twin/logs/experiment_100/ --target delay --name experiment_504 --topology-name random
+python3 generate_data.py --input-dir ../physical_twin/logs/experiment_100/ --target delay --name experiment_100 --topology-name 5g_crosshaul
 ```
 
 ## :gear: NDT operation
@@ -148,7 +148,7 @@ To generate the results and run the NDT for transport network with synchronizati
 
 `--sync`: Flag to enable NDT synchronization.
 
-`--target`: Type of QoS to be predicted.
+`--target`: Type of QoS to be predicted, which can be `delay | jitter`.
 
 Example of use, considering the current directory `ndt/sync`:
 
@@ -169,7 +169,7 @@ You can run the SLA monitoring application using the script `ndt_sync_w_app.py`.
 
 `--sync`: Flag to enable NDT synchronization.
 
-`--target`: Type of QoS to be predicted.
+`--target`: Type of QoS to be predicted, which can be `delay | jitter`.
 
 Example of use, considering the current directory `ndt/sync`:
 
